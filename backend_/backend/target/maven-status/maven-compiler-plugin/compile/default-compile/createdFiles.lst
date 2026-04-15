@@ -1,4 +1,0 @@
-com\edutrack\backend\auth\config\SecurityConfig.class
-com\edutrack\backend\ticket\service\TicketService$1.class
-com\edutrack\backend\auth\service\AuthService.class
-com\edutrack\backend\auth\exception\GlobalExceptionHandler.class
