@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import logo from '../assets/edutrack.png'
 import { getDashboardPath, normalizeRole } from '../auth/roles.js'
 import { API_BASE_URL } from '../config.js'
 
@@ -17,20 +18,6 @@ const Login = () => {
     event.preventDefault()
     setSubmitMessage('')
 
-    const normalizedEmail = formData.email.trim().toLowerCase()
-    const password = formData.password
-    const emailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-
-    if (!normalizedEmail || !emailPattern.test(normalizedEmail)) {
-      setSubmitMessage('Please enter a valid email address.')
-      return
-    }
-
-    if (!password.trim()) {
-      setSubmitMessage('Password is required.')
-      return
-    }
-
     setIsSubmitting(true)
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -39,19 +26,14 @@ const Login = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: normalizedEmail,
-          password,
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
         }),
       })
 
       const data = await response.json()
       if (!response.ok) {
-        const validationErrors = data?.errors
-        const validationMessage = validationErrors
-          ? Object.values(validationErrors).find((value) => typeof value === 'string' && value.trim())
-          : null
-
-        setSubmitMessage(validationMessage || data.message || 'Login failed. Please check your credentials.')
+        setSubmitMessage(data.message || 'Login failed. Please check your credentials.')
         return
       }
 
@@ -81,11 +63,28 @@ const Login = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans">
+      <header className="border-b border-slate-200 bg-white/85 px-6 py-3 backdrop-blur sm:px-10">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="EduTrack logo" className="h-10 w-10 rounded-xl object-cover" />
+            <div>
+              <h2 className="text-xl font-black text-slate-900">EduTrack</h2>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Smart Campus Platform</p>
+            </div>
+          </div>
+          <div className="text-sm text-slate-600">
+            New here?{' '}
+            <Link to="/signup" className="font-bold text-blue-900 hover:underline">
+              Create account
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <div className="flex flex-1 overflow-hidden">
       <div className="relative hidden w-1/2 overflow-hidden bg-orange-100 lg:flex">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-orange-300/60 blur-3xl"></div>
-        <div className="absolute -bottom-24 right-0 h-112 w-md rounded-full bg-blue-300/50 blur-3xl"></div>
+        <div className="absolute -bottom-24 right-0 h-[28rem] w-[28rem] rounded-full bg-blue-300/50 blur-3xl"></div>
 
         <div className="relative z-10 m-10 flex w-full flex-col justify-between rounded-[2.5rem] border border-white/40 bg-white/45 p-10 backdrop-blur-sm">
           <div>
@@ -130,6 +129,8 @@ const Login = () => {
                 type="email"
                 placeholder="name@smartcampus.com"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none ring-orange-200 transition focus:ring-4"
+                pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+                title="Use a valid email address"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
@@ -191,6 +192,12 @@ const Login = () => {
       </div>
       </div>
 
+      <footer className="border-t border-slate-200 bg-white px-6 py-3 sm:px-10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <p>EduTrack Smart Campus</p>
+          <p>Secure access for bookings and maintenance workflows</p>
+        </div>
+      </footer>
     </div>
   )
 }

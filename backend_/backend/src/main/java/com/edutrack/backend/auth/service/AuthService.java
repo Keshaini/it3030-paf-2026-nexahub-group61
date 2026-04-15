@@ -6,34 +6,18 @@ import com.edutrack.backend.auth.dto.AdminUpdateUserRequest;
 import com.edutrack.backend.auth.dto.AdminUserDto;
 import com.edutrack.backend.auth.dto.ForgotPasswordRequest;
 import com.edutrack.backend.auth.dto.LoginRequest;
-import com.edutrack.backend.auth.dto.ResetPasswordRequest;
 import com.edutrack.backend.auth.dto.SignUpRequest;
-import com.edutrack.backend.auth.dto.UpdateOwnProfileRequest;
-import com.edutrack.backend.auth.dto.VerifySignUpRequest;
 import com.edutrack.backend.auth.config.RoleNames;
 import com.edutrack.backend.auth.entity.UserAccount;
 import com.edutrack.backend.auth.exception.AuthException;
 import com.edutrack.backend.auth.repository.UserAccountRepository;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,40 +25,14 @@ import java.util.regex.Pattern;
 @Service
 public class AuthService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
-    private static final int OTP_MIN = 1000;
-    private static final int OTP_MAX = 9999;
-    private static final long OTP_EXPIRY_MINUTES = 10;
-
     private static final Pattern TECHNICIAN_IT_NUMBER_PATTERN = Pattern.compile("^ITTECH(\\d{3})$");
 
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
-    private final String mailFromAddress;
-    private final String mailUsername;
-    private final String mailPassword;
-    private final boolean allowDevOtpFallback;
 
-    private final Map<String, SignupOtpEntry> signupOtps = new ConcurrentHashMap<>();
-    private final Map<String, PasswordResetOtpEntry> passwordResetOtps = new ConcurrentHashMap<>();
-
-    public AuthService(
-            UserAccountRepository userAccountRepository,
-            PasswordEncoder passwordEncoder,
-            ObjectProvider<JavaMailSender> mailSenderProvider,
-            @Value("${app.mail.from:no-reply@smartcampus.local}") String mailFromAddress,
-            @Value("${spring.mail.username:}") String mailUsername,
-            @Value("${spring.mail.password:}") String mailPassword,
-            @Value("${app.mail.allow-dev-otp-fallback:true}") boolean allowDevOtpFallback
-    ) {
+    public AuthService(UserAccountRepository userAccountRepository, PasswordEncoder passwordEncoder) {
         this.userAccountRepository = userAccountRepository;
         this.passwordEncoder = passwordEncoder;
-        this.mailSenderProvider = mailSenderProvider;
-        this.mailFromAddress = mailFromAddress;
-        this.mailUsername = mailUsername;
-        this.mailPassword = mailPassword;
-        this.allowDevOtpFallback = allowDevOtpFallback;
     }
 
     @Transactional
@@ -94,49 +52,19 @@ public class AuthService {
             throw new AuthException("An account with this IT number already exists");
         }
 
-        String otpCode = generateOtpCode();
-        signupOtps.put(normalizedEmail, new SignupOtpEntry(request, otpCode, LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)));
-        log.info("Signup OTP generated for {}: {} (expires in {} minutes)", normalizedEmail, otpCode, OTP_EXPIRY_MINUTES);
-        try {
-            sendEmail(normalizedEmail, "EduTrack signup verification code", buildSignupOtpBody(otpCode, request.fullName().trim()));
-        } catch (AuthException mailException) {
-            if (allowDevOtpFallback) {
-                log.warn("Email send failed for signup OTP. Falling back to API OTP disclosure for {}", normalizedEmail);
-                return AuthResponse.messageOnly("Email delivery failed. Use this verification code for now: " + otpCode);
-            }
-            throw mailException;
-        }
-
-        return AuthResponse.messageOnly("A 4-digit verification code has been sent to your email.");
-    }
-
-    @Transactional
-    public AuthResponse verifySignUpCode(VerifySignUpRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
-        SignupOtpEntry otpEntry = readValidSignupOtp(normalizedEmail, request.code());
-        SignUpRequest signupRequest = otpEntry.request();
-
-        if (userAccountRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new AuthException("An account with this email already exists");
-        }
-
-        String normalizedItNumber = normalizeItNumber(signupRequest.itNumber());
-        if (userAccountRepository.existsByItNumberIgnoreCase(normalizedItNumber)) {
-            throw new AuthException("An account with this IT number already exists");
-        }
-
         UserAccount userAccount = new UserAccount();
-        userAccount.setFullName(signupRequest.fullName().trim());
+        userAccount.setFullName(request.fullName().trim());
         userAccount.setItNumber(normalizedItNumber);
         userAccount.setEmail(normalizedEmail);
-        userAccount.setPasswordHash(passwordEncoder.encode(signupRequest.password()));
+        userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
         userAccount.setRole(RoleNames.USER);
 
         UserAccount saved = userAccountRepository.save(userAccount);
+
         return AuthResponse.success(
                 "Signup successful",
                 saved.getEmail(),
-                saved.getItNumber(),
+            saved.getItNumber(),
                 saved.getFullName(),
                 saved.getRole()
         );
@@ -164,44 +92,16 @@ public class AuthService {
         );
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public AuthResponse forgotPassword(ForgotPasswordRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
 
         boolean accountExists = userAccountRepository.existsByEmailIgnoreCase(normalizedEmail);
         if (!accountExists) {
-            return AuthResponse.messageOnly("If the email exists, a 4-digit verification code has been sent.");
+            return AuthResponse.messageOnly("If the email exists, a password reset link has been sent.");
         }
 
-        String otpCode = generateOtpCode();
-        passwordResetOtps.put(normalizedEmail, new PasswordResetOtpEntry(otpCode, LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)));
-        log.info("Password reset OTP generated for {}: {} (expires in {} minutes)", normalizedEmail, otpCode, OTP_EXPIRY_MINUTES);
-        sendEmail(normalizedEmail, "EduTrack password reset code", buildPasswordResetOtpBody(otpCode));
-
-        return AuthResponse.messageOnly("If the email exists, a 4-digit verification code has been sent.");
-    }
-
-    @Transactional
-    public AuthResponse verifyPasswordReset(ResetPasswordRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
-
-        if (!request.newPassword().equals(request.confirmPassword())) {
-            throw new AuthException("Passwords do not match");
-        }
-
-        PasswordResetOtpEntry otpEntry = readValidPasswordResetOtp(normalizedEmail, request.code());
-        if (otpEntry == null) {
-            throw new AuthException("Invalid or expired verification code");
-        }
-
-        UserAccount userAccount = userAccountRepository.findByEmailIgnoreCase(normalizedEmail)
-                .orElseThrow(() -> new AuthException("Account not found"));
-
-        userAccount.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        userAccountRepository.save(userAccount);
-        passwordResetOtps.remove(normalizedEmail);
-
-        return AuthResponse.messageOnly("Password reset successful.");
+        return AuthResponse.messageOnly("If the email exists, a password reset link has been sent.");
     }
 
     @Transactional
@@ -375,128 +275,11 @@ public class AuthService {
         userAccountRepository.delete(existingUser);
     }
 
-    @Transactional
-    public AuthResponse updateOwnProfile(UpdateOwnProfileRequest request) {
-        String normalizedCurrentEmail = normalizeEmail(request.currentEmail());
-        UserAccount existingUser = userAccountRepository.findByEmailIgnoreCase(normalizedCurrentEmail)
-                .orElseThrow(() -> new AuthException("User not found"));
-
-        String normalizedEmail = normalizeEmail(request.email());
-        String normalizedItNumber = normalizeItNumber(request.itNumber());
-
-        if (userAccountRepository.existsByEmailIgnoreCaseAndIdNot(normalizedEmail, existingUser.getId())) {
-            throw new AuthException("An account with this email already exists");
-        }
-
-        if (userAccountRepository.existsByItNumberIgnoreCaseAndIdNot(normalizedItNumber, existingUser.getId())) {
-            throw new AuthException("An account with this IT number already exists");
-        }
-
-        existingUser.setFullName(request.fullName().trim());
-        existingUser.setEmail(normalizedEmail);
-        existingUser.setItNumber(normalizedItNumber);
-
-        UserAccount saved = userAccountRepository.save(existingUser);
-
-        return AuthResponse.success(
-                "Profile updated successfully",
-                saved.getEmail(),
-                saved.getItNumber(),
-                saved.getFullName(),
-                RoleNames.normalize(saved.getRole())
-        );
-    }
-
-    @Transactional
-    public AuthResponse deleteOwnProfile(String email) {
-        String normalizedEmail = normalizeEmail(email);
-        UserAccount existingUser = userAccountRepository.findByEmailIgnoreCase(normalizedEmail)
-                .orElseThrow(() -> new AuthException("User not found"));
-        userAccountRepository.delete(existingUser);
-        return AuthResponse.messageOnly("Profile deleted successfully");
-    }
-
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private String normalizeItNumber(String itNumber) {
         return itNumber.trim().toUpperCase(Locale.ROOT);
-    }
-
-    private String generateOtpCode() {
-        return String.valueOf(ThreadLocalRandom.current().nextInt(OTP_MIN, OTP_MAX + 1));
-    }
-
-    private void sendEmail(String toAddress, String subject, String body) {
-        JavaMailSender javaMailSender = mailSenderProvider.getIfAvailable();
-        if (javaMailSender == null) {
-            throw new AuthException("Email service is unavailable. Please configure SMTP and try again.");
-        }
-
-        if (mailUsername == null || mailUsername.isBlank() || mailPassword == null || mailPassword.isBlank()) {
-            throw new AuthException("Email service is not configured. Set MAIL_USERNAME and MAIL_PASSWORD, then retry signup.");
-        }
-
-        try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            helper.setFrom(mailFromAddress);
-            helper.setTo(toAddress);
-            helper.setSubject(subject);
-            helper.setText(body, false);
-            javaMailSender.send(message);
-        } catch (MessagingException | MailException ex) {
-            log.warn("Failed to send verification email to {}: {}", toAddress, ex.getMessage());
-            throw new AuthException("Unable to send verification email. Check SMTP credentials and MAIL_FROM, then try again.");
-        }
-    }
-
-    private String buildSignupOtpBody(String otpCode, String fullName) {
-        return "Hello " + fullName + ",\n\n"
-                + "Your EduTrack signup verification code is: " + otpCode + "\n\n"
-                + "This code expires in " + OTP_EXPIRY_MINUTES + " minutes.\n"
-                + "If you did not request this, you can ignore this email.";
-    }
-
-    private String buildPasswordResetOtpBody(String otpCode) {
-        return "Your EduTrack password reset code is: " + otpCode + "\n\n"
-                + "This code expires in " + OTP_EXPIRY_MINUTES + " minutes.\n"
-                + "Use it to confirm your password reset request.";
-    }
-
-    private SignupOtpEntry readValidSignupOtp(String normalizedEmail, String code) {
-        SignupOtpEntry otpEntry = signupOtps.get(normalizedEmail);
-        if (otpEntry == null || otpEntry.expiresAt().isBefore(LocalDateTime.now())) {
-            signupOtps.remove(normalizedEmail);
-            throw new AuthException("Invalid or expired verification code");
-        }
-
-        if (!otpEntry.code().equals(code)) {
-            throw new AuthException("Invalid or expired verification code");
-        }
-
-        signupOtps.remove(normalizedEmail);
-        return otpEntry;
-    }
-
-    private PasswordResetOtpEntry readValidPasswordResetOtp(String normalizedEmail, String code) {
-        PasswordResetOtpEntry otpEntry = passwordResetOtps.get(normalizedEmail);
-        if (otpEntry == null || otpEntry.expiresAt().isBefore(LocalDateTime.now())) {
-            passwordResetOtps.remove(normalizedEmail);
-            return null;
-        }
-
-        if (!otpEntry.code().equals(code)) {
-            return null;
-        }
-
-        return otpEntry;
-    }
-
-    private record SignupOtpEntry(SignUpRequest request, String code, LocalDateTime expiresAt) {
-    }
-
-    private record PasswordResetOtpEntry(String code, LocalDateTime expiresAt) {
     }
 }

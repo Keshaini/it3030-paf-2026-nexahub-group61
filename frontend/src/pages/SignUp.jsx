@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { requestSignupCode, verifySignupCode } from '../api/authApi.js'
+import logo from '../assets/edutrack.png'
+import { API_BASE_URL } from '../config.js'
 
 const initialForm = {
   name: '',
@@ -20,10 +21,6 @@ const SignUp = () => {
   const [touched, setTouched] = useState({})
   const [submitMessage, setSubmitMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [verificationStep, setVerificationStep] = useState('details')
-  const [verificationCode, setVerificationCode] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const passwordChecks = {
     minLength: formData.password.length >= 8,
@@ -138,67 +135,6 @@ const SignUp = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    if (verificationStep === 'details') {
-      const nextErrors = validateAll(formData)
-      setErrors(nextErrors)
-      setTouched({
-        name: true,
-        itNumber: true,
-        email: true,
-        password: true,
-        confirmPassword: true,
-      })
-
-      const hasErrors = Object.values(nextErrors).some(Boolean)
-      if (hasErrors) {
-        setSubmitMessage('Please fix the highlighted fields before submitting.')
-        return
-      }
-
-      setIsSubmitting(true)
-      try {
-        const response = await requestSignupCode({
-          fullName: formData.name.trim(),
-          itNumber: formData.itNumber.trim().toUpperCase(),
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-        })
-
-        setSubmitMessage(response.message || 'A verification code has been sent to your email.')
-        setVerificationStep('verify')
-      } catch (requestError) {
-        setSubmitMessage(requestError.message || 'Cannot connect to server. Please start backend and try again.')
-      } finally {
-        setIsSubmitting(false)
-      }
-
-      return
-    }
-
-    if (!verificationCode.trim()) {
-      setSubmitMessage('Enter the 4-digit verification code sent to your email.')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const data = await verifySignupCode({
-        email: formData.email.trim().toLowerCase(),
-        code: verificationCode.trim(),
-      })
-
-      localStorage.setItem('auth_it_number', formData.itNumber.trim().toUpperCase())
-      setSubmitMessage(data.message || 'Signup successful. Redirecting to login...')
-      setTimeout(() => navigate('/login', { replace: true }), 800)
-    } catch (submitError) {
-      setSubmitMessage(submitError.message || 'Invalid or expired code. Please request a new code and try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleResendCode = async () => {
     const nextErrors = validateAll(formData)
     setErrors(nextErrors)
     setTouched({
@@ -211,26 +147,37 @@ const SignUp = () => {
 
     const hasErrors = Object.values(nextErrors).some(Boolean)
     if (hasErrors) {
-      setSubmitMessage('Fix the form before requesting a new code.')
-      setVerificationStep('details')
+      setSubmitMessage('Please fix the highlighted fields before submitting.')
       return
     }
 
     setIsSubmitting(true)
     try {
-      const response = await requestSignupCode({
-        fullName: formData.name.trim(),
-        itNumber: formData.itNumber.trim().toUpperCase(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
+      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: formData.name.trim(),
+          itNumber: formData.itNumber.trim().toUpperCase(),
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+        }),
       })
 
-      setVerificationCode('')
-      setSubmitMessage(response.message || 'A new verification code has been sent to your email.')
-      setVerificationStep('verify')
-    } catch (requestError) {
-      setSubmitMessage(requestError.message || 'Cannot connect to server. Please start backend and try again.')
+      const data = await response.json()
+      if (!response.ok) {
+        setSubmitMessage(data.message || 'Signup failed. Please try again.')
+        return
+      }
+
+      localStorage.setItem('auth_it_number', formData.itNumber.trim().toUpperCase())
+      setSubmitMessage('Signup successful. Redirecting to login...')
+      setTimeout(() => navigate('/login', { replace: true }), 800)
+    } catch {
+      setSubmitMessage('Cannot connect to server. Please start backend and try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -240,6 +187,23 @@ const SignUp = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
+      <header className="border-b border-slate-200 bg-white/90 px-6 py-3 backdrop-blur sm:px-10">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="EduTrack logo" className="h-10 w-10 rounded-xl object-cover" />
+            <div>
+              <h2 className="text-xl font-black text-slate-900">EduTrack</h2>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Smart Campus Platform</p>
+            </div>
+          </div>
+          <div className="text-sm text-slate-600">
+            Already member?{' '}
+            <Link to="/login" className="font-bold text-blue-900 hover:underline">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <div className="flex flex-1 overflow-hidden">
       <div className="relative flex w-full flex-col px-8 py-10 sm:px-16 md:px-24 lg:w-1/2">
@@ -320,6 +284,8 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+                title="Use a valid email address"
               />
               {isFieldValid('email') ? (
                 <svg className="ml-2 h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,21 +301,16 @@ const SignUp = () => {
               </svg>
               <input
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 placeholder="********"
                 className="w-full bg-transparent font-bold tracking-widest text-blue-950 outline-none placeholder:text-gray-400"
                 value={formData.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="ml-2 text-xs font-bold text-gray-500 hover:text-gray-700"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+              <svg className="ml-2 h-5 w-5 cursor-pointer text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
             </div>
             {touched.password && errors.password ? <p className="text-xs text-red-500">{errors.password}</p> : null}
 
@@ -378,53 +339,16 @@ const SignUp = () => {
               </svg>
               <input
                 name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type="password"
                 placeholder="Re-Type Password"
                 className="w-full bg-transparent font-medium text-blue-950 outline-none placeholder:text-gray-300"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="ml-2 text-xs font-bold text-gray-500 hover:text-gray-700"
-                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-              >
-                {showConfirmPassword ? 'Hide' : 'Show'}
-              </button>
             </div>
             {touched.confirmPassword && errors.confirmPassword ? (
               <p className="text-xs text-red-500">{errors.confirmPassword}</p>
-            ) : null}
-
-            {verificationStep === 'verify' ? (
-              <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-                <p className="text-sm font-semibold text-blue-950">Enter the 4-digit code sent to {formData.email || 'your email'}.</p>
-                <div className="flex items-center border-b border-blue-200 py-2 transition focus-within:border-blue-900">
-                  <svg className="mr-3 h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <input
-                    name="verificationCode"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={4}
-                    placeholder="1234"
-                    className="w-full bg-transparent font-bold tracking-[0.5em] text-blue-950 outline-none placeholder:text-blue-300"
-                    value={verificationCode}
-                    onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 4))}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  disabled={isSubmitting}
-                  className="text-sm font-semibold text-blue-900 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Resend code
-                </button>
-              </div>
             ) : null}
 
             <div className="pt-4">
@@ -433,13 +357,13 @@ const SignUp = () => {
                 disabled={isSubmitting}
                 className="water-button flex w-48 items-center justify-between rounded-full px-8 py-3 font-semibold text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110"
               >
-                {isSubmitting ? (verificationStep === 'verify' ? 'Verifying...' : 'Signing Up...') : verificationStep === 'verify' ? 'Verify Code' : 'Sign Up'}
+                {isSubmitting ? 'Signing Up...' : 'Sign Up'}
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
               {submitMessage ? (
-                <p className={`mt-3 text-sm ${submitMessage.toLowerCase().includes('sent to your email') || submitMessage.toLowerCase().includes('successful') ? 'text-green-600' : 'text-red-500'}`}>
+                <p className={`mt-3 text-sm ${submitMessage.startsWith('Validation passed') ? 'text-green-600' : 'text-red-500'}`}>
                   {submitMessage}
                 </p>
               ) : null}
@@ -451,7 +375,7 @@ const SignUp = () => {
       <div className="relative hidden w-1/2 items-center justify-center overflow-hidden rounded-l-[3rem] bg-blue-900 shadow-2xl lg:flex">
         <div className="absolute right-0 top-0 h-full w-full opacity-20">
           <div className="absolute right-[-10%] top-[-10%] h-[60%] w-[120%] rounded-full bg-blue-800 blur-3xl"></div>
-          <div className="absolute bottom-[-10%] left-[-20%] h-[70%] w-full rounded-full bg-orange-600 blur-3xl"></div>
+          <div className="absolute bottom-[-10%] left-[-20%] h-[70%] w-[100%] rounded-full bg-orange-600 blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex w-full max-w-lg flex-col gap-8 px-8">
@@ -514,6 +438,12 @@ const SignUp = () => {
 
       </div>
 
+      <footer className="border-t border-slate-200 bg-white px-6 py-3 sm:px-10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <p>EduTrack Smart Campus</p>
+          <p>Role-based access and auditable updates</p>
+        </div>
+      </footer>
     </div>
   )
 }

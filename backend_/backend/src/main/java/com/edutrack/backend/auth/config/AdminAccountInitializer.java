@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
-import java.util.Optional;
 
 import static com.edutrack.backend.auth.config.RoleNames.ADMIN;
 import static com.edutrack.backend.auth.config.RoleNames.MANAGER;
@@ -76,39 +75,21 @@ public class AdminAccountInitializer implements CommandLineRunner {
 
     private void seedAccount(String email, String password, String fullName, String itNumber, String role) {
         String normalizedEmail = normalizeEmail(email);
-        String normalizedItNumber = normalizeItNumber(itNumber);
 
-        Optional<UserAccount> accountByEmail = userAccountRepository.findByEmailIgnoreCase(normalizedEmail);
-        Optional<UserAccount> accountByItNumber = userAccountRepository.findByItNumberIgnoreCase(normalizedItNumber);
+        if (userAccountRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            logger.info("{} account already exists for email: {}", role, normalizedEmail);
+            return;
+        }
 
-        UserAccount account = accountByEmail.orElseGet(() -> accountByItNumber.orElseGet(UserAccount::new));
-        boolean isNewAccount = account.getId() == null;
-
+        UserAccount account = new UserAccount();
         account.setFullName(fullName.trim());
+        account.setItNumber(normalizeItNumber(itNumber));
+        account.setEmail(normalizedEmail);
+        account.setPasswordHash(passwordEncoder.encode(password));
         account.setRole(role);
 
-        if (isNewAccount || !passwordEncoder.matches(password, account.getPasswordHash())) {
-            account.setPasswordHash(passwordEncoder.encode(password));
-        }
-
-        if (isNewAccount || !userAccountRepository.existsByEmailIgnoreCaseAndIdNot(normalizedEmail, account.getId())) {
-            account.setEmail(normalizedEmail);
-        } else {
-            logger.warn("Skipping email update for {} account due to unique conflict: {}", role, normalizedEmail);
-        }
-
-        if (isNewAccount || !userAccountRepository.existsByItNumberIgnoreCaseAndIdNot(normalizedItNumber, account.getId())) {
-            account.setItNumber(normalizedItNumber);
-        } else {
-            logger.warn("Skipping IT number update for {} account due to unique conflict: {}", role, normalizedItNumber);
-        }
-
         userAccountRepository.save(account);
-        if (isNewAccount) {
-            logger.info("Default {} account created for email: {}", role, normalizedEmail);
-        } else {
-            logger.info("Default {} account updated for email: {}", role, account.getEmail());
-        }
+        logger.info("Default {} account created for email: {}", role, normalizedEmail);
     }
 
     private String normalizeEmail(String email) {
