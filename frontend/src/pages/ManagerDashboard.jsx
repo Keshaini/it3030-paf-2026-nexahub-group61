@@ -54,15 +54,15 @@ const ManagerDashboard = () => {
         </aside>
 
         <main className="rounded-[1.5rem] border border-slate-200 bg-white p-5 sm:p-6">
-          <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Manager Dashboard</p>
               <h2 className="text-2xl font-black text-slate-900">Reports and approvals</h2>
             </div>
             <button className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white">Open Reports</button>
-          </header>
+          </div>
 
-          <section className="mt-5 grid gap-4 md:grid-cols-3">
+          <section className="grid gap-4 md:grid-cols-3">
             {reportCards.map((metric) => (
               <article key={metric.label} className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500">{metric.label}</p>

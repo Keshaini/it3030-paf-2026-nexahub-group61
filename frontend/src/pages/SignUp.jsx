@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import logo from '../assets/edutrack.png'
 import { API_BASE_URL } from '../config.js'
 
 const initialForm = {
@@ -187,24 +186,6 @@ const SignUp = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      <header className="border-b border-slate-200 bg-white/90 px-6 py-3 backdrop-blur sm:px-10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="EduTrack logo" className="h-10 w-10 rounded-xl object-cover" />
-            <div>
-              <h2 className="text-xl font-black text-slate-900">EduTrack</h2>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Smart Campus Platform</p>
-            </div>
-          </div>
-          <div className="text-sm text-slate-600">
-            Already member?{' '}
-            <Link to="/login" className="font-bold text-blue-900 hover:underline">
-              Sign in
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <div className="flex flex-1 overflow-hidden">
       <div className="relative flex w-full flex-col px-8 py-10 sm:px-16 md:px-24 lg:w-1/2">
         <div className="mb-12 flex w-full items-center justify-between">
@@ -437,13 +418,6 @@ const SignUp = () => {
       </div>
 
       </div>
-
-      <footer className="border-t border-slate-200 bg-white px-6 py-3 sm:px-10">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-          <p>EduTrack Smart Campus</p>
-          <p>Role-based access and auditable updates</p>
-        </div>
-      </footer>
     </div>
   )
 }

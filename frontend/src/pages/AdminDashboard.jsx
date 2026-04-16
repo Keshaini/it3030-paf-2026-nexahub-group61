@@ -345,7 +345,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-[#f5efe8] p-3 sm:p-5">
       <div className="mx-auto max-w-7xl rounded-[2rem] border border-slate-200 bg-slate-50 p-5 shadow-xl sm:p-7">
-        <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src={logo} alt="EduTrack logo" className="h-10 w-10 rounded-xl object-cover" />
             <div>
@@ -421,9 +421,9 @@ const AdminDashboard = () => {
               </div>
             ) : null}
           </div>
-        </header>
+        </div>
 
-        <section className="mt-6 grid gap-5 lg:grid-cols-[240px_1fr]">
+        <section className="grid gap-5 lg:grid-cols-[240px_1fr]">
           <aside className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Navigation</p>
             <nav className="mt-4 space-y-2">

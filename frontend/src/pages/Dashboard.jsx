@@ -265,20 +265,6 @@ const Dashboard = () => {
               </div>
             </div>
           </section>
-
-          <footer className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div className="flex items-center gap-2 text-slate-600">
-                <img src={logo} alt="EduTrack logo" className="h-6 w-6 rounded object-cover" />
-                <span className="font-semibold">EduTrack Smart Campus</span>
-                <span>Copyright {new Date().getFullYear()}</span>
-              </div>
-              <div className="flex items-center gap-4 text-slate-500">
-                <span className="font-medium">Status: Operational</span>
-                <span>Version 1.0</span>
-              </div>
-            </div>
-          </footer>
         </main>
 
         <aside className="overflow-auto rounded-[1.5rem] border border-slate-200 bg-white p-6">
