@@ -13,6 +13,21 @@ const Login = () => {
   const [submitMessage, setSubmitMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const extractErrorMessage = (payload, fallbackMessage) => {
+    if (payload?.errors && typeof payload.errors === 'object') {
+      const firstFieldError = Object.values(payload.errors)[0]
+      if (typeof firstFieldError === 'string' && firstFieldError.trim()) {
+        return firstFieldError
+      }
+    }
+
+    if (typeof payload?.message === 'string' && payload.message.trim()) {
+      return payload.message
+    }
+
+    return fallbackMessage
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setSubmitMessage('')
@@ -32,7 +47,7 @@ const Login = () => {
 
       const data = await response.json()
       if (!response.ok) {
-        setSubmitMessage(data.message || 'Login failed. Please check your credentials.')
+        setSubmitMessage(extractErrorMessage(data, 'Login failed. Please check your credentials.'))
         return
       }
 
@@ -110,8 +125,6 @@ const Login = () => {
                 type="email"
                 placeholder="name@smartcampus.com"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none ring-orange-200 transition focus:ring-4"
-                pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
-                title="Use a valid email address"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
