@@ -4,6 +4,7 @@ import com.edutrack.backend.auth.entity.UserAccount;
 import com.edutrack.backend.auth.repository.UserAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +18,7 @@ import static com.edutrack.backend.auth.config.RoleNames.MANAGER;
 import static com.edutrack.backend.auth.config.RoleNames.TECHNICIAN;
 
 @Component
+@ConditionalOnProperty(name = "app.seed-default-users", havingValue = "true")
 public class AdminAccountInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAccountInitializer.class);
