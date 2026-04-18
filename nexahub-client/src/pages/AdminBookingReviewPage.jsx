@@ -5,6 +5,7 @@ import { getAuthUser } from '../auth/roles.js'
 import { approveBooking, cancelBooking, fetchAllBookings, fetchResources, rejectBooking } from '../bookings/api.js'
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
+import AdminPanelSidebar from '../components/AdminPanelSidebar.jsx'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
 import ReasonDialog from '../components/ReasonDialog.jsx'
 
@@ -72,6 +73,11 @@ const AdminBookingReviewPage = () => {
 
   if (user.role !== 'ADMIN') {
     return <Navigate to="/dashboard" replace />
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_user')
+    navigate('/login', { replace: true })
   }
 
   const handleFilterChange = (event) => {
@@ -150,33 +156,30 @@ const AdminBookingReviewPage = () => {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fef3c7_0%,#fff7ed_28%,#eff6ff_100%)] p-3 sm:p-5">
       <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/60 bg-white/85 p-4 shadow-2xl backdrop-blur sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-5">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="EduTrack logo" className="h-11 w-11 rounded-2xl object-cover shadow" />
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Admin Review</p>
-              <h1 className="text-3xl font-black text-slate-900">Booking Approval Console</h1>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/dashboard')}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Back to admin dashboard
-            </button>
-            <button
-              type="button"
-              onClick={loadBookings}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white"
-            >
-              Refresh requests
-            </button>
-          </div>
-        </div>
+        <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
+          <AdminPanelSidebar user={user} activeItem="Bookings" onLogout={handleLogout} />
 
-        <section className="mt-6 grid gap-4 md:grid-cols-4">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-5">
+              <div className="flex items-center gap-3">
+                <img src={logo} alt="EduTrack logo" className="h-11 w-11 rounded-2xl object-cover shadow" />
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Admin Review</p>
+                  <h1 className="text-3xl font-black text-slate-900">Booking Approval Console</h1>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={loadBookings}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+                >
+                  Refresh requests
+                </button>
+              </div>
+            </div>
+
+            <section className="mt-6 grid gap-4 md:grid-cols-4">
           {[
             { label: 'Total requests', value: metrics.total, tone: 'from-slate-100 to-slate-50 text-slate-900' },
             { label: 'Pending', value: metrics.pending, tone: 'from-amber-200 to-amber-50 text-amber-900' },
@@ -188,9 +191,9 @@ const AdminBookingReviewPage = () => {
               <p className="mt-3 text-4xl font-black">{card.value}</p>
             </article>
           ))}
-        </section>
+            </section>
 
-        <section className="mt-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="mt-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Filters</p>
@@ -336,7 +339,9 @@ const AdminBookingReviewPage = () => {
               )
             })}
           </div>
-        </section>
+            </section>
+          </div>
+        </div>
       </div>
 
       <ReasonDialog

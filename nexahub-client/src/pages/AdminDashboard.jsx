@@ -1,8 +1,9 @@
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import logo from '../assets/edutrack.png'
 import { getAuthUser } from '../auth/roles.js'
 import { API_BASE_URL } from '../config.js'
+import AdminPanelSidebar from '../components/AdminPanelSidebar.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 
 const adminSections = ['Users', 'Resources', 'Bookings', 'Notifications']
@@ -26,8 +27,9 @@ const initialAdminNotifications = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const user = getAuthUser()
-  const [activeSection, setActiveSection] = useState('Users')
+  const [activeSection, setActiveSection] = useState(location.state?.section || 'Users')
   const [users, setUsers] = useState([])
   const [isUsersLoading, setIsUsersLoading] = useState(false)
   const [usersStatus, setUsersStatus] = useState('')
@@ -114,6 +116,14 @@ const AdminDashboard = () => {
       fetchNotificationPreferences()
     }
   }, [activeSection, user?.email])
+
+  useEffect(() => {
+    const requestedSection = location.state?.section
+
+    if (requestedSection && requestedSection !== activeSection && adminSections.includes(requestedSection)) {
+      setActiveSection(requestedSection)
+    }
+  }, [location.state, activeSection])
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -385,10 +395,6 @@ const AdminDashboard = () => {
                 </span>
               ) : null}
             </button>
-            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">ADMIN</span>
-            <button onClick={handleLogout} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              Logout
-            </button>
 
             {isNotificationPanelOpen ? (
               <div className="absolute right-0 top-12 z-20 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
@@ -442,28 +448,12 @@ const AdminDashboard = () => {
         </div>
 
         <section className="grid gap-5 lg:grid-cols-[240px_1fr]">
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Navigation</p>
-            <nav className="mt-4 space-y-2">
-              {adminSections.map((section) => {
-                const isActive = activeSection === section
-                return (
-                  <button
-                    key={section}
-                    type="button"
-                    onClick={() => setActiveSection(section)}
-                    className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
-                      isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {section}
-                  </button>
-                )
-              })}
-            </nav>
-          </aside>
+          <AdminPanelSidebar
+            user={user}
+            activeItem={activeSection}
+            onSectionChange={setActiveSection}
+            onLogout={handleLogout}
+          />
 
           <div className="space-y-5">
             <section className="rounded-2xl border border-slate-200 bg-white p-5">

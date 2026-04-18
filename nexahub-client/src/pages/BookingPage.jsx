@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import logo from '../assets/edutrack.png'
-import { getAuthUser, getDashboardPath } from '../auth/roles.js'
+import { getAuthUser } from '../auth/roles.js'
 import { cancelBooking, createBooking, deleteBooking, fetchMyBookings, fetchResources, updateBooking } from '../bookings/api.js'
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
@@ -252,13 +252,6 @@ const BookingPage = () => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate(getDashboardPath(user.role))}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Back to dashboard
-                </button>
                 <button
                   type="button"
                   onClick={loadPageData}
