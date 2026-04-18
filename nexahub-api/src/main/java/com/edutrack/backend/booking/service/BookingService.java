@@ -192,6 +192,22 @@ public class BookingService {
         return BookingResponse.fromEntity(bookingRepository.save(booking));
     }
 
+    @Transactional
+    public void deleteBooking(Long bookingId, String requesterEmail) {
+        Booking booking = requireDetailedBooking(bookingId);
+        UserAccount requester = requireUser(requesterEmail);
+
+        if (!booking.getRequestedBy().getId().equals(requester.getId())) {
+            throw new BookingException("Only the requester can delete this booking");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.REJECTED) {
+            throw new BookingException("Only pending or rejected bookings can be deleted");
+        }
+
+        bookingRepository.delete(booking);
+    }
+
     private Booking requireDetailedBooking(Long bookingId) {
         return bookingRepository.findDetailedById(bookingId)
                 .orElseThrow(() -> new BookingException("Booking not found"));

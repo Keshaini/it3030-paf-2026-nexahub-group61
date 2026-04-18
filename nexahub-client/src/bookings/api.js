@@ -54,6 +54,10 @@ export const updateBooking = (bookingId, payload) => request(`/api/bookings/${bo
   body: JSON.stringify(payload),
 })
 
+export const deleteBooking = (bookingId, requesterEmail) => request(`/api/bookings/${bookingId}${buildQuery({ requesterEmail })}`, {
+  method: 'DELETE',
+})
+
 export const cancelBooking = (bookingId, actorEmail, reason) => request(`/api/bookings/${bookingId}/cancel`, {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' },

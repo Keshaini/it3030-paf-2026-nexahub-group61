@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -66,6 +67,15 @@ public class BookingController {
             @Valid @RequestBody UpdateBookingRequest request
     ) {
         return ResponseEntity.ok(bookingService.updateBooking(bookingId, request));
+    }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<Void> deleteBooking(
+            @PathVariable Long bookingId,
+            @RequestParam @NotBlank @Email String requesterEmail
+    ) {
+        bookingService.deleteBooking(bookingId, requesterEmail);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{bookingId}/approve")

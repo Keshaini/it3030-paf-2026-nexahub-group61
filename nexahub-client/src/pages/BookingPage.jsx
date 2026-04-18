@@ -2,7 +2,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import logo from '../assets/edutrack.png'
 import { getAuthUser, getDashboardPath } from '../auth/roles.js'
-import { cancelBooking, createBooking, fetchMyBookings, fetchResources, updateBooking } from '../bookings/api.js'
+import { cancelBooking, createBooking, deleteBooking, fetchMyBookings, fetchResources, updateBooking } from '../bookings/api.js'
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
@@ -30,7 +30,7 @@ const BookingPage = () => {
   const [editingBookingId, setEditingBookingId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [actionBookingId, setActionBookingId] = useState(null)
+  const [actionKey, setActionKey] = useState('')
   const [pageStatus, setPageStatus] = useState('')
   const [formStatus, setFormStatus] = useState('')
 
@@ -173,7 +173,7 @@ const BookingPage = () => {
       return
     }
 
-    setActionBookingId(booking.id)
+    setActionKey(`cancel-${booking.id}`)
     setPageStatus('')
 
     try {
@@ -188,7 +188,33 @@ const BookingPage = () => {
     } catch (error) {
       setPageStatus(error.message || 'Failed to cancel booking.')
     } finally {
-      setActionBookingId(null)
+      setActionKey('')
+    }
+  }
+
+  const handleDeleteBooking = async (booking) => {
+    const isConfirmed = window.confirm(`Delete booking for ${booking.resourceName}?`)
+
+    if (!isConfirmed) {
+      return
+    }
+
+    setActionKey(`delete-${booking.id}`)
+    setPageStatus('')
+
+    try {
+      await deleteBooking(booking.id, user.email)
+      setPageStatus(`Booking for ${booking.resourceName} was deleted.`)
+
+      if (editingBookingId === booking.id) {
+        resetBookingForm()
+      }
+
+      await loadPageData()
+    } catch (error) {
+      setPageStatus(error.message || 'Failed to delete booking.')
+    } finally {
+      setActionKey('')
     }
   }
 
@@ -450,77 +476,96 @@ const BookingPage = () => {
               ) : null}
 
               <div className="mt-5 space-y-4">
-                {filteredBookings.map((booking) => (
-                  <article key={booking.id} className="rounded-[1.5rem] border border-slate-200 p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-xl font-black text-slate-900">{booking.resourceName}</h3>
-                          <BookingStatusBadge status={booking.status} />
+                {filteredBookings.map((booking) => {
+                  const cancelKey = `cancel-${booking.id}`
+                  const deleteKey = `delete-${booking.id}`
+
+                  return (
+                    <article key={booking.id} className="rounded-[1.5rem] border border-slate-200 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-xl font-black text-slate-900">{booking.resourceName}</h3>
+                            <BookingStatusBadge status={booking.status} />
+                          </div>
+                          <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} - {booking.resourceLocation}</p>
                         </div>
-                        <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} - {booking.resourceLocation}</p>
+                        <div className="text-right text-sm text-slate-500">
+                          <p>Requested on {formatDateTime(booking.createdAt)}</p>
+                          <p>Capacity: {booking.resourceCapacity}</p>
+                        </div>
                       </div>
-                      <div className="text-right text-sm text-slate-500">
-                        <p>Requested on {formatDateTime(booking.createdAt)}</p>
-                        <p>Capacity: {booking.resourceCapacity}</p>
-                      </div>
-                    </div>
 
-                    <div className="mt-5 grid gap-3 md:grid-cols-4">
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Date</p>
-                        <p className="mt-2 font-bold text-slate-900">{formatBookingDate(booking.bookingDate)}</p>
+                      <div className="mt-5 grid gap-3 md:grid-cols-4">
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Date</p>
+                          <p className="mt-2 font-bold text-slate-900">{formatBookingDate(booking.bookingDate)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Time</p>
+                          <p className="mt-2 font-bold text-slate-900">{formatTimeRange(booking.startTime, booking.endTime)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Attendees</p>
+                          <p className="mt-2 font-bold text-slate-900">{booking.expectedAttendees}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Reviewed by</p>
+                          <p className="mt-2 font-bold text-slate-900">{booking.reviewedByName || 'Awaiting review'}</p>
+                        </div>
                       </div>
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Time</p>
-                        <p className="mt-2 font-bold text-slate-900">{formatTimeRange(booking.startTime, booking.endTime)}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Attendees</p>
-                        <p className="mt-2 font-bold text-slate-900">{booking.expectedAttendees}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Reviewed by</p>
-                        <p className="mt-2 font-bold text-slate-900">{booking.reviewedByName || 'Awaiting review'}</p>
-                      </div>
-                    </div>
 
-                    <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Purpose</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">{booking.purpose}</p>
+                      <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Purpose</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">{booking.purpose}</p>
 
-                      {booking.rejectionReason ? (
-                        <p className="mt-3 text-sm text-rose-700">Rejection reason: {booking.rejectionReason}</p>
-                      ) : null}
-
-                      {booking.cancellationReason ? (
-                        <p className="mt-3 text-sm text-slate-700">Cancellation note: {booking.cancellationReason}</p>
-                      ) : null}
-                    </div>
-
-                    {['PENDING', 'APPROVED'].includes(booking.status) ? (
-                      <div className="mt-4 flex justify-end gap-2">
-                        {booking.status === 'PENDING' ? (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(booking)}
-                            className="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-50"
-                          >
-                            Edit booking
-                          </button>
+                        {booking.rejectionReason ? (
+                          <p className="mt-3 text-sm text-rose-700">Rejection reason: {booking.rejectionReason}</p>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() => handleCancelBooking(booking)}
-                          disabled={actionBookingId === booking.id}
-                          className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
-                        >
-                          {actionBookingId === booking.id ? 'Cancelling...' : 'Cancel booking'}
-                        </button>
+
+                        {booking.cancellationReason ? (
+                          <p className="mt-3 text-sm text-slate-700">Cancellation note: {booking.cancellationReason}</p>
+                        ) : null}
                       </div>
-                    ) : null}
-                  </article>
-                ))}
+
+                      {['PENDING', 'APPROVED', 'REJECTED'].includes(booking.status) ? (
+                        <div className="mt-4 flex justify-end gap-2">
+                          {booking.status === 'PENDING' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(booking)}
+                              className="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-50"
+                            >
+                              Edit booking
+                            </button>
+                          ) : null}
+
+                          {['PENDING', 'APPROVED'].includes(booking.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCancelBooking(booking)}
+                              disabled={actionKey === cancelKey}
+                              className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                            >
+                              {actionKey === cancelKey ? 'Cancelling...' : 'Cancel booking'}
+                            </button>
+                          ) : null}
+
+                          {['PENDING', 'REJECTED'].includes(booking.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBooking(booking)}
+                              disabled={actionKey === deleteKey}
+                              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                            >
+                              {actionKey === deleteKey ? 'Deleting...' : 'Delete booking'}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  )
+                })}
               </div>
             </section>
           </main>
