@@ -126,6 +126,10 @@ const AdminDashboard = () => {
     navigate('/login', { replace: true })
   }
 
+  const handleOpenBookingReview = () => {
+    navigate('/admin/bookings')
+  }
+
   const handleChange = (event) => {
     const { name, value } = event.target
     setFormData((prev) => ({
@@ -354,6 +358,13 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleOpenBookingReview}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Review bookings
+            </button>
             <button
               type="button"
               onClick={() => setIsNotificationPanelOpen((prev) => !prev)}
@@ -685,6 +696,21 @@ const AdminDashboard = () => {
                     className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
                   >
                     {isNotificationSaving ? 'Saving...' : 'Save Preferences'}
+                  </button>
+                </div>
+              ) : null}
+
+              {activeSection === 'Bookings' ? (
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm text-slate-500">
+                    Booking approval, rejection, cancellation, and filtering are handled in the dedicated review console.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenBookingReview}
+                    className="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white"
+                  >
+                    Open booking review console
                   </button>
                 </div>
               ) : null}

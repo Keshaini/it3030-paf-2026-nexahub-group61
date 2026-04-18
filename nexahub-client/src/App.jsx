@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AdminDashboard from './pages/AdminDashboard.jsx'
+import AdminBookingReviewPage from './pages/AdminBookingReviewPage.jsx'
+import BookingPage from './pages/BookingPage.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Home from './pages/Home.jsx'
@@ -26,6 +28,14 @@ function App() {
         }
       />
       <Route
+        path="/bookings"
+        element={
+          <ProtectedRoute minRole={ROLES.USER}>
+            <BookingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/technician/dashboard"
         element={
           <ProtectedRoute minRole={ROLES.TECHNICIAN}>
@@ -46,6 +56,14 @@ function App() {
         element={
           <ProtectedRoute minRole={ROLES.ADMIN}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/bookings"
+        element={
+          <ProtectedRoute minRole={ROLES.ADMIN}>
+            <AdminBookingReviewPage />
           </ProtectedRoute>
         }
       />

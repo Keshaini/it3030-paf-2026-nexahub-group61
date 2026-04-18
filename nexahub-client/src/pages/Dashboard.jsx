@@ -120,6 +120,10 @@ const Dashboard = () => {
     navigate('/login')
   }
 
+  const handleOpenBookings = () => {
+    navigate('/bookings')
+  }
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#f5efe8] p-2 sm:p-3 lg:p-4">
       <div className="grid h-full w-full gap-3 rounded-[2rem] bg-slate-50 p-3 shadow-2xl lg:grid-cols-[260px_minmax(0,1fr)_280px] lg:p-4">
@@ -141,8 +145,8 @@ const Dashboard = () => {
 
           <nav className="mt-8 space-y-2 text-sm font-semibold text-slate-600">
             <button className="w-full rounded-xl bg-slate-900 px-4 py-3 text-left text-white">Dashboard</button>
-            <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
-            <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Requests</button>
+            <button onClick={handleOpenBookings} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
+            <button onClick={handleOpenBookings} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Requests</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Notifications</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Profile</button>
           </nav>
@@ -172,7 +176,7 @@ const Dashboard = () => {
               <h1 className="text-3xl font-black text-slate-900">Hello, {userItNumber}</h1>
               <p className="text-sm text-slate-500">Your bookings, requests, and status updates at a glance.</p>
             </div>
-            <button className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">Create Request</button>
+            <button onClick={handleOpenBookings} className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">Create Request</button>
           </div>
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
