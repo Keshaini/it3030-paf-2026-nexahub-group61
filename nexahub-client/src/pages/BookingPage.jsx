@@ -6,6 +6,8 @@ import { cancelBooking, createBooking, deleteBooking, fetchMyBookings, fetchReso
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import ReasonDialog from '../components/ReasonDialog.jsx'
 
 const createInitialForm = () => ({
   resourceId: '',
@@ -33,6 +35,8 @@ const BookingPage = () => {
   const [actionKey, setActionKey] = useState('')
   const [pageStatus, setPageStatus] = useState('')
   const [formStatus, setFormStatus] = useState('')
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const loadPageData = async () => {
     if (!user?.email) {
@@ -166,21 +170,25 @@ const BookingPage = () => {
     }
   }
 
-  const handleCancelBooking = async (booking) => {
-    const reason = window.prompt('Optional cancellation reason', booking.cancellationReason || '')
+  const handleCancelBooking = (booking) => {
+    setPageStatus('')
+    setCancelTarget(booking)
+  }
 
-    if (reason === null) {
+  const handleCancelBookingSubmit = async (reason) => {
+    if (!cancelTarget) {
       return
     }
 
-    setActionKey(`cancel-${booking.id}`)
+    setActionKey(`cancel-${cancelTarget.id}`)
     setPageStatus('')
 
     try {
-      await cancelBooking(booking.id, user.email, reason)
-      setPageStatus(`Booking for ${booking.resourceName} was cancelled.`)
+      await cancelBooking(cancelTarget.id, user.email, reason)
+      setPageStatus(`Booking for ${cancelTarget.resourceName} was cancelled.`)
+      setCancelTarget(null)
 
-      if (editingBookingId === booking.id) {
+      if (editingBookingId === cancelTarget.id) {
         resetBookingForm()
       }
 
@@ -192,21 +200,25 @@ const BookingPage = () => {
     }
   }
 
-  const handleDeleteBooking = async (booking) => {
-    const isConfirmed = window.confirm(`Delete booking for ${booking.resourceName}?`)
+  const handleDeleteBooking = (booking) => {
+    setPageStatus('')
+    setDeleteTarget(booking)
+  }
 
-    if (!isConfirmed) {
+  const handleDeleteBookingConfirm = async () => {
+    if (!deleteTarget) {
       return
     }
 
-    setActionKey(`delete-${booking.id}`)
+    setActionKey(`delete-${deleteTarget.id}`)
     setPageStatus('')
 
     try {
-      await deleteBooking(booking.id, user.email)
-      setPageStatus(`Booking for ${booking.resourceName} was deleted.`)
+      await deleteBooking(deleteTarget.id, user.email)
+      setPageStatus(`Booking for ${deleteTarget.resourceName} was deleted.`)
+      setDeleteTarget(null)
 
-      if (editingBookingId === booking.id) {
+      if (editingBookingId === deleteTarget.id) {
         resetBookingForm()
       }
 
@@ -571,6 +583,47 @@ const BookingPage = () => {
           </main>
         </div>
       </div>
+
+      <ReasonDialog
+        isOpen={Boolean(cancelTarget)}
+        title="Cancel booking"
+        description="Use a short note when the admin or your team may need context for why this booking is being cancelled."
+        label="Cancellation note"
+        placeholder="Optional note for this cancellation"
+        helperText="Optional. Leaving it blank keeps the cancellation clean and quick."
+        initialValue={cancelTarget?.cancellationReason || ''}
+        confirmLabel={actionKey === `cancel-${cancelTarget?.id}` ? 'Cancelling...' : 'Cancel booking'}
+        confirmTone="danger"
+        isBusy={Boolean(cancelTarget) && actionKey === `cancel-${cancelTarget?.id}`}
+        onClose={() => {
+          if (!actionKey.startsWith('cancel-')) {
+            setCancelTarget(null)
+          }
+        }}
+        onSubmit={handleCancelBookingSubmit}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        title="Delete booking request"
+        description="Delete only requests you no longer need. This permanently removes the booking record from your history."
+        confirmLabel={actionKey === `delete-${deleteTarget?.id}` ? 'Deleting...' : 'Delete booking'}
+        confirmTone="danger"
+        isBusy={Boolean(deleteTarget) && actionKey === `delete-${deleteTarget?.id}`}
+        onClose={() => {
+          if (!actionKey.startsWith('delete-')) {
+            setDeleteTarget(null)
+          }
+        }}
+        onConfirm={handleDeleteBookingConfirm}
+      >
+        {deleteTarget ? (
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-900">{deleteTarget.resourceName}</p>
+            <p>{formatBookingDate(deleteTarget.bookingDate)} at {formatTimeRange(deleteTarget.startTime, deleteTarget.endTime)}</p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   )
 }

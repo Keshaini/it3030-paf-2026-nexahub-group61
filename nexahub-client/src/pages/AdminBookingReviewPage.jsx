@@ -6,6 +6,7 @@ import { approveBooking, cancelBooking, fetchAllBookings, fetchResources, reject
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
+import ReasonDialog from '../components/ReasonDialog.jsx'
 
 const AdminBookingReviewPage = () => {
   const navigate = useNavigate()
@@ -20,6 +21,8 @@ const AdminBookingReviewPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [actionKey, setActionKey] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState(null)
 
   const loadResources = async () => {
     try {
@@ -94,18 +97,22 @@ const AdminBookingReviewPage = () => {
     }
   }
 
-  const handleReject = async (bookingId) => {
-    const reason = window.prompt('Enter a rejection reason')
+  const handleReject = (booking) => {
+    setStatusMessage('')
+    setRejectTarget(booking)
+  }
 
-    if (reason === null) {
+  const handleRejectSubmit = async (reason) => {
+    if (!rejectTarget) {
       return
     }
 
-    setActionKey(`reject-${bookingId}`)
+    setActionKey(`reject-${rejectTarget.id}`)
     setStatusMessage('')
 
     try {
-      await rejectBooking(bookingId, user.email, reason)
+      await rejectBooking(rejectTarget.id, user.email, reason)
+      setRejectTarget(null)
       setStatusMessage('Booking rejected.')
       await loadBookings()
     } catch (error) {
@@ -115,18 +122,22 @@ const AdminBookingReviewPage = () => {
     }
   }
 
-  const handleCancel = async (bookingId) => {
-    const reason = window.prompt('Optional cancellation reason')
+  const handleCancel = (booking) => {
+    setStatusMessage('')
+    setCancelTarget(booking)
+  }
 
-    if (reason === null) {
+  const handleCancelSubmit = async (reason) => {
+    if (!cancelTarget) {
       return
     }
 
-    setActionKey(`cancel-${bookingId}`)
+    setActionKey(`cancel-${cancelTarget.id}`)
     setStatusMessage('')
 
     try {
-      await cancelBooking(bookingId, user.email, reason)
+      await cancelBooking(cancelTarget.id, user.email, reason)
+      setCancelTarget(null)
       setStatusMessage('Booking cancelled.')
       await loadBookings()
     } catch (error) {
@@ -244,7 +255,7 @@ const AdminBookingReviewPage = () => {
                         <h3 className="text-xl font-black text-slate-900">{booking.resourceName}</h3>
                         <BookingStatusBadge status={booking.status} />
                       </div>
-                      <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} · {booking.resourceCategory} · {booking.resourceLocation}</p>
+                      <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} - {booking.resourceCategory} - {booking.resourceLocation}</p>
                     </div>
                     <div className="text-right text-sm text-slate-500">
                       <p>{booking.requesterName}</p>
@@ -301,7 +312,7 @@ const AdminBookingReviewPage = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleReject(booking.id)}
+                          onClick={() => handleReject(booking)}
                           disabled={actionKey === rejectKey}
                           className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-60"
                         >
@@ -313,7 +324,7 @@ const AdminBookingReviewPage = () => {
                     {['PENDING', 'APPROVED'].includes(booking.status) ? (
                       <button
                         type="button"
-                        onClick={() => handleCancel(booking.id)}
+                        onClick={() => handleCancel(booking)}
                         disabled={actionKey === cancelKey}
                         className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                       >
@@ -327,6 +338,45 @@ const AdminBookingReviewPage = () => {
           </div>
         </section>
       </div>
+
+      <ReasonDialog
+        isOpen={Boolean(rejectTarget)}
+        title="Reject booking request"
+        description="Give the requester a clear reason so they can correct the request instead of guessing what failed."
+        label="Rejection reason"
+        placeholder="Example: The lab is reserved for an exam during this slot."
+        helperText="Required. The requester will see this in their booking history."
+        initialValue={rejectTarget?.rejectionReason || ''}
+        confirmLabel={actionKey === `reject-${rejectTarget?.id}` ? 'Rejecting...' : 'Reject booking'}
+        confirmTone="danger"
+        isBusy={Boolean(rejectTarget) && actionKey === `reject-${rejectTarget?.id}`}
+        required
+        onClose={() => {
+          if (!actionKey.startsWith('reject-')) {
+            setRejectTarget(null)
+          }
+        }}
+        onSubmit={handleRejectSubmit}
+      />
+
+      <ReasonDialog
+        isOpen={Boolean(cancelTarget)}
+        title="Cancel booking"
+        description="Use a cancellation note when the requester should understand why a pending or approved booking was stopped."
+        label="Cancellation note"
+        placeholder="Optional note for the requester"
+        helperText="Optional, but useful for approved bookings so the requester has clear feedback."
+        initialValue={cancelTarget?.cancellationReason || ''}
+        confirmLabel={actionKey === `cancel-${cancelTarget?.id}` ? 'Cancelling...' : 'Cancel booking'}
+        confirmTone="danger"
+        isBusy={Boolean(cancelTarget) && actionKey === `cancel-${cancelTarget?.id}`}
+        onClose={() => {
+          if (!actionKey.startsWith('cancel-')) {
+            setCancelTarget(null)
+          }
+        }}
+        onSubmit={handleCancelSubmit}
+      />
     </div>
   )
 }

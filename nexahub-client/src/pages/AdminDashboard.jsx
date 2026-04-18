@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import logo from '../assets/edutrack.png'
 import { getAuthUser } from '../auth/roles.js'
 import { API_BASE_URL } from '../config.js'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 
 const adminSections = ['Users', 'Resources', 'Bookings', 'Notifications']
 const USERS_API_URL = `${API_BASE_URL}/api/auth/admin/users`
@@ -54,6 +55,7 @@ const AdminDashboard = () => {
   const [isNotificationSaving, setIsNotificationSaving] = useState(false)
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const [adminNotifications, setAdminNotifications] = useState(initialAdminNotifications)
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null)
 
   const unreadNotificationCount = adminNotifications.filter((notification) => !notification.read).length
 
@@ -258,16 +260,20 @@ const AdminDashboard = () => {
     }
   }
 
-  const handleDeleteUser = async (userToDelete) => {
-    const isConfirmed = window.confirm(`Delete user ${userToDelete.email}?`)
-    if (!isConfirmed) {
+  const handleDeleteUser = (userToDelete) => {
+    setCrudStatus('')
+    setDeleteUserTarget(userToDelete)
+  }
+
+  const handleDeleteUserConfirm = async () => {
+    if (!deleteUserTarget) {
       return
     }
 
     setCrudStatus('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/${userToDelete.id}`, {
+      const response = await fetch(`${API_BASE_URL}/${deleteUserTarget.id}`, {
         method: 'DELETE',
       })
 
@@ -283,10 +289,11 @@ const AdminDashboard = () => {
         return
       }
 
-      setCrudStatus(`User deleted: ${userToDelete.email}`)
-      if (editingUserId === userToDelete.id) {
+      setCrudStatus(`User deleted: ${deleteUserTarget.email}`)
+      if (editingUserId === deleteUserTarget.id) {
         handleCancelEdit()
       }
+      setDeleteUserTarget(null)
       fetchUsers()
     } catch {
       setCrudStatus('Cannot connect to server. Please start backend and try again.')
@@ -719,6 +726,24 @@ const AdminDashboard = () => {
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteUserTarget)}
+        title="Delete user account"
+        description="Use delete only for accounts that should be removed completely. This action affects access across the system."
+        confirmLabel="Delete user"
+        confirmTone="danger"
+        onClose={() => setDeleteUserTarget(null)}
+        onConfirm={handleDeleteUserConfirm}
+      >
+        {deleteUserTarget ? (
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-900">{deleteUserTarget.fullName || 'Unnamed user'}</p>
+            <p>{deleteUserTarget.email}</p>
+            <p>{deleteUserTarget.role}</p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   )
 }
