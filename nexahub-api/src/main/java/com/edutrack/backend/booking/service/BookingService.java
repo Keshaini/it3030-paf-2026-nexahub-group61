@@ -7,6 +7,7 @@ import com.edutrack.backend.booking.config.BookingStatus;
 import com.edutrack.backend.booking.dto.BookingActionRequest;
 import com.edutrack.backend.booking.dto.BookingResponse;
 import com.edutrack.backend.booking.dto.CreateBookingRequest;
+import com.edutrack.backend.booking.dto.UpdateBookingRequest;
 import com.edutrack.backend.booking.entity.Booking;
 import com.edutrack.backend.booking.entity.Resource;
 import com.edutrack.backend.booking.exception.BookingException;
@@ -50,14 +51,48 @@ public class BookingService {
         ensureNoConflict(resource.getId(), request.bookingDate(), request.startTime(), request.endTime(), null);
 
         Booking booking = new Booking();
-        booking.setResource(resource);
         booking.setRequestedBy(requester);
-        booking.setBookingDate(request.bookingDate());
-        booking.setStartTime(request.startTime());
-        booking.setEndTime(request.endTime());
-        booking.setPurpose(request.purpose().trim());
-        booking.setExpectedAttendees(request.expectedAttendees());
+        applyBookingDetails(
+                booking,
+                resource,
+                request.bookingDate(),
+                request.startTime(),
+                request.endTime(),
+                request.purpose(),
+                request.expectedAttendees()
+        );
         booking.setStatus(BookingStatus.PENDING);
+
+        return BookingResponse.fromEntity(bookingRepository.save(booking));
+    }
+
+    @Transactional
+    public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
+        Booking booking = requireDetailedBooking(bookingId);
+        UserAccount requester = requireUser(request.requesterEmail());
+        Resource resource = resourceService.requireActiveResource(request.resourceId());
+
+        if (!booking.getRequestedBy().getId().equals(requester.getId())) {
+            throw new BookingException("Only the requester can edit this booking");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BookingException("Only pending bookings can be edited");
+        }
+
+        validateTimeWindow(request.startTime(), request.endTime());
+        validateCapacity(resource, request.expectedAttendees());
+        ensureNoConflict(resource.getId(), request.bookingDate(), request.startTime(), request.endTime(), booking.getId());
+
+        applyBookingDetails(
+                booking,
+                resource,
+                request.bookingDate(),
+                request.startTime(),
+                request.endTime(),
+                request.purpose(),
+                request.expectedAttendees()
+        );
 
         return BookingResponse.fromEntity(bookingRepository.save(booking));
     }
@@ -160,6 +195,23 @@ public class BookingService {
     private Booking requireDetailedBooking(Long bookingId) {
         return bookingRepository.findDetailedById(bookingId)
                 .orElseThrow(() -> new BookingException("Booking not found"));
+    }
+
+    private void applyBookingDetails(
+            Booking booking,
+            Resource resource,
+            LocalDate bookingDate,
+            java.time.LocalTime startTime,
+            java.time.LocalTime endTime,
+            String purpose,
+            Integer expectedAttendees
+    ) {
+        booking.setResource(resource);
+        booking.setBookingDate(bookingDate);
+        booking.setStartTime(startTime);
+        booking.setEndTime(endTime);
+        booking.setPurpose(purpose.trim());
+        booking.setExpectedAttendees(expectedAttendees);
     }
 
     private void ensureNoConflict(Long resourceId, LocalDate bookingDate, java.time.LocalTime startTime, java.time.LocalTime endTime, Long excludedBookingId) {

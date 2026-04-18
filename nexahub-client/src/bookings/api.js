@@ -48,6 +48,12 @@ export const createBooking = (payload) => request('/api/bookings', {
   body: JSON.stringify(payload),
 })
 
+export const updateBooking = (bookingId, payload) => request(`/api/bookings/${bookingId}`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+})
+
 export const cancelBooking = (bookingId, actorEmail, reason) => request(`/api/bookings/${bookingId}/cancel`, {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' },

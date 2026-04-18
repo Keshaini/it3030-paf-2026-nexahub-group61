@@ -2,7 +2,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import logo from '../assets/edutrack.png'
 import { getAuthUser, getDashboardPath } from '../auth/roles.js'
-import { cancelBooking, createBooking, fetchMyBookings, fetchResources } from '../bookings/api.js'
+import { cancelBooking, createBooking, fetchMyBookings, fetchResources, updateBooking } from '../bookings/api.js'
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
@@ -27,6 +27,7 @@ const BookingPage = () => {
     bookingDate: '',
   })
   const [formData, setFormData] = useState(createInitialForm)
+  const [editingBookingId, setEditingBookingId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionBookingId, setActionBookingId] = useState(null)
@@ -77,6 +78,7 @@ const BookingPage = () => {
     return matchesStatus && matchesResource && matchesDate
   }), [bookings, filters])
 
+  const isEditMode = editingBookingId !== null
   const selectedResource = resources.find((resource) => String(resource.id) === formData.resourceId)
   const pendingCount = bookings.filter((booking) => booking.status === 'PENDING').length
   const approvedCount = bookings.filter((booking) => booking.status === 'APPROVED').length
@@ -84,6 +86,14 @@ const BookingPage = () => {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  const resetBookingForm = () => {
+    setEditingBookingId(null)
+    setFormData((prev) => ({
+      ...createInitialForm(),
+      resourceId: prev.resourceId || (resources[0] ? String(resources[0].id) : ''),
+    }))
   }
 
   const handleFormChange = (event) => {
@@ -103,27 +113,51 @@ const BookingPage = () => {
     }))
   }
 
-  const handleCreateBooking = async (event) => {
+  const handleStartEdit = (booking) => {
+    setEditingBookingId(booking.id)
+    setFormStatus('')
+    setPageStatus('')
+    setFormData({
+      resourceId: String(booking.resourceId),
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      expectedAttendees: String(booking.expectedAttendees),
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEdit = () => {
+    setFormStatus('')
+    resetBookingForm()
+  }
+
+  const handleSubmitBooking = async (event) => {
     event.preventDefault()
     setFormStatus('')
     setIsSubmitting(true)
 
-    try {
-      await createBooking({
-        resourceId: Number(formData.resourceId),
-        requesterEmail: user.email,
-        bookingDate: formData.bookingDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        purpose: formData.purpose.trim(),
-        expectedAttendees: Number(formData.expectedAttendees),
-      })
+    const payload = {
+      requesterEmail: user.email,
+      resourceId: Number(formData.resourceId),
+      bookingDate: formData.bookingDate,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      purpose: formData.purpose.trim(),
+      expectedAttendees: Number(formData.expectedAttendees),
+    }
 
-      setFormStatus('Booking request submitted. It is now waiting for admin review.')
-      setFormData((prev) => ({
-        ...createInitialForm(),
-        resourceId: prev.resourceId,
-      }))
+    try {
+      if (isEditMode) {
+        await updateBooking(editingBookingId, payload)
+        setFormStatus('Pending booking updated successfully.')
+      } else {
+        await createBooking(payload)
+        setFormStatus('Booking request submitted. It is now waiting for admin review.')
+      }
+
+      resetBookingForm()
       await loadPageData()
     } catch (error) {
       setFormStatus(error.message || 'Booking request failed.')
@@ -145,6 +179,11 @@ const BookingPage = () => {
     try {
       await cancelBooking(booking.id, user.email, reason)
       setPageStatus(`Booking for ${booking.resourceName} was cancelled.`)
+
+      if (editingBookingId === booking.id) {
+        resetBookingForm()
+      }
+
       await loadPageData()
     } catch (error) {
       setPageStatus(error.message || 'Failed to cancel booking.')
@@ -190,20 +229,22 @@ const BookingPage = () => {
               <p className="text-sm text-slate-300">{user.email}</p>
               <p className="mt-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-100">{user.role}</p>
               <p className="mt-5 text-sm leading-6 text-slate-300">
-                Submit a resource request, track review status, and cancel active bookings without touching the other modules.
+                Submit a resource request, edit pending requests, and cancel active bookings without touching the other modules.
               </p>
             </section>
 
             <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">New request</p>
-                  <h2 className="text-2xl font-black text-slate-900">Book a resource</h2>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{isEditMode ? 'Edit request' : 'New request'}</p>
+                  <h2 className="text-2xl font-black text-slate-900">{isEditMode ? 'Edit pending booking' : 'Book a resource'}</h2>
                 </div>
-                <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700">Conflict safe</span>
+                <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700">
+                  {isEditMode ? 'Pending only' : 'Conflict safe'}
+                </span>
               </div>
 
-              <form className="mt-5 space-y-4" onSubmit={handleCreateBooking}>
+              <form className="mt-5 space-y-4" onSubmit={handleSubmitBooking}>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="resourceId">
                     Resource
@@ -314,15 +355,31 @@ const BookingPage = () => {
                   </div>
                 ) : null}
 
+                {isEditMode ? (
+                  <p className="text-sm text-slate-500">Only bookings that are still pending can be edited.</p>
+                ) : null}
+
                 {formStatus ? <p className="text-sm text-slate-700">{formStatus}</p> : null}
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || resources.length === 0}
-                  className="water-button w-full rounded-2xl py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/20 disabled:opacity-60"
-                >
-                  {isSubmitting ? 'Submitting request...' : 'Submit booking request'}
-                </button>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || resources.length === 0}
+                    className="water-button w-full rounded-2xl py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/20 disabled:opacity-60"
+                  >
+                    {isSubmitting ? (isEditMode ? 'Updating booking...' : 'Submitting request...') : (isEditMode ? 'Update pending booking' : 'Submit booking request')}
+                  </button>
+
+                  {isEditMode ? (
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:max-w-[170px]"
+                    >
+                      Cancel edit
+                    </button>
+                  ) : null}
+                </div>
               </form>
             </section>
           </aside>
@@ -401,7 +458,7 @@ const BookingPage = () => {
                           <h3 className="text-xl font-black text-slate-900">{booking.resourceName}</h3>
                           <BookingStatusBadge status={booking.status} />
                         </div>
-                        <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} · {booking.resourceLocation}</p>
+                        <p className="mt-2 text-sm text-slate-500">{booking.resourceCode} - {booking.resourceLocation}</p>
                       </div>
                       <div className="text-right text-sm text-slate-500">
                         <p>Requested on {formatDateTime(booking.createdAt)}</p>
@@ -442,7 +499,16 @@ const BookingPage = () => {
                     </div>
 
                     {['PENDING', 'APPROVED'].includes(booking.status) ? (
-                      <div className="mt-4 flex justify-end">
+                      <div className="mt-4 flex justify-end gap-2">
+                        {booking.status === 'PENDING' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(booking)}
+                            className="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-50"
+                          >
+                            Edit booking
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => handleCancelBooking(booking)}
