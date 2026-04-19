@@ -4,8 +4,23 @@ import logo from '../assets/edutrack.png'
 import { getAuthUser } from '../auth/roles.js'
 import { API_BASE_URL } from '../config.js'
 
-const adminSections = ['Users', 'Resources', 'Bookings', 'Notifications']
+const adminSections = ['Users', 'Resources', 'Bookings', 'Notifications', 'Tickets']
 const USERS_API_URL = `${API_BASE_URL}/api/auth/admin/users`
+const TICKETS_URL = `${API_BASE_URL}/api/tickets`
+
+const TICKET_STATUS_COLORS = {
+  OPEN: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  IN_PROGRESS: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  RESOLVED: { bg: 'bg-green-100', text: 'text-green-700' },
+  CLOSED: { bg: 'bg-slate-100', text: 'text-slate-500' },
+  REJECTED: { bg: 'bg-red-100', text: 'text-red-700' },
+}
+const TICKET_WORKFLOW = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
+
+function fmtDate(dt) { return dt ? new Date(dt).toLocaleString() : '—' }
+function tkHeaders(email, role) {
+  return { 'Content-Type': 'application/json', 'X-User-Email': email, 'X-User-Role': role }
+}
 const NOTIFICATION_API_URL = `${API_BASE_URL}/api/auth/notification-preferences`
 const notificationCategoryLabels = {
   BOOKING_UPDATES: 'Booking Updates',
@@ -55,13 +70,26 @@ const AdminDashboard = () => {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const [adminNotifications, setAdminNotifications] = useState(initialAdminNotifications)
 
+  // ── Ticket state ──────────────────────────────────────────────────────
+  const [tickets, setTickets] = useState([])
+  const [loadingTickets, setLoadingTickets] = useState(false)
+  const [ticketMsg, setTicketMsg] = useState('')
+  const [selectedTicket, setSelectedTicket] = useState(null)
+  const [ticketStatusForm, setTicketStatusForm] = useState({ status: '', rejectionReason: '', resolutionNotes: '', assignedToEmail: '' })
+  const [updatingTicket, setUpdatingTicket] = useState(false)
+  const [ticketFilterStatus, setTicketFilterStatus] = useState('ALL')
+  const [ticketComments, setTicketComments] = useState([])
+  const [ticketCommentText, setTicketCommentText] = useState('')
+  const [editingTicketCommentId, setEditingTicketCommentId] = useState(null)
+  const [editingTicketCommentText, setEditingTicketCommentText] = useState('')
+
   const unreadNotificationCount = adminNotifications.filter((notification) => !notification.read).length
 
   const fetchUsers = async () => {
     setIsUsersLoading(true)
     setUsersStatus('')
     try {
-      const response = await fetch(API_BASE_URL)
+      const response = await fetch(USERS_API_URL)
       const data = await response.json()
 
       if (!response.ok) {
@@ -112,6 +140,94 @@ const AdminDashboard = () => {
       fetchNotificationPreferences()
     }
   }, [activeSection, user?.email])
+
+  useEffect(() => {
+    if (activeSection === 'Tickets') fetchAllTickets()
+  }, [activeSection])
+
+  async function fetchAllTickets() {
+    setLoadingTickets(true); setTicketMsg('')
+    try {
+      const res = await fetch(TICKETS_URL, { headers: tkHeaders(user.email, user.role) })
+      const data = await res.json()
+      setTickets(Array.isArray(data) ? data : [])
+    } catch { setTicketMsg('Cannot connect to server.') }
+    finally { setLoadingTickets(false) }
+  }
+
+  async function fetchTicketComments(ticketId) {
+    try {
+      const res = await fetch(`${TICKETS_URL}/${ticketId}/comments`, { headers: tkHeaders(user.email, user.role) })
+      const data = await res.json()
+      setTicketComments(Array.isArray(data) ? data : [])
+    } catch { setTicketComments([]) }
+  }
+
+  function openTicketDetail(ticket) {
+    setSelectedTicket(ticket)
+    setTicketStatusForm({ status: ticket.status, rejectionReason: '', resolutionNotes: ticket.resolutionNotes || '', assignedToEmail: ticket.assignedToEmail || '' })
+    setTicketMsg('')
+    setTicketCommentText('')
+    setEditingTicketCommentId(null)
+    fetchTicketComments(ticket.id)
+  }
+
+  async function handleUpdateTicketStatus(e) {
+    e.preventDefault()
+    setUpdatingTicket(true); setTicketMsg('')
+    try {
+      const res = await fetch(`${TICKETS_URL}/${selectedTicket.id}/status`, {
+        method: 'PUT',
+        headers: tkHeaders(user.email, user.role),
+        body: JSON.stringify(ticketStatusForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTicketMsg(data.message || 'Failed to update.'); return }
+      setTicketMsg(`Status updated to ${data.status}`)
+      setSelectedTicket(data)
+      setTickets(prev => prev.map(t => t.id === data.id ? data : t))
+    } catch { setTicketMsg('Cannot connect to server.') }
+    finally { setUpdatingTicket(false) }
+  }
+
+  async function handleDeleteTicket(id) {
+    if (!window.confirm('Permanently delete this ticket and all its comments?')) return
+    try {
+      await fetch(`${TICKETS_URL}/${id}`, { method: 'DELETE', headers: tkHeaders(user.email, user.role) })
+      setSelectedTicket(null)
+      fetchAllTickets()
+    } catch { setTicketMsg('Failed to delete ticket.') }
+  }
+
+  async function handleAddTicketComment() {
+    if (!ticketCommentText.trim()) return
+    try {
+      const res = await fetch(`${TICKETS_URL}/${selectedTicket.id}/comments`, {
+        method: 'POST', headers: tkHeaders(user.email, user.role),
+        body: JSON.stringify({ content: ticketCommentText }),
+      })
+      if (res.ok) { setTicketCommentText(''); fetchTicketComments(selectedTicket.id) }
+    } catch { /* silent */ }
+  }
+
+  async function handleUpdateTicketComment(id) {
+    if (!editingTicketCommentText.trim()) return
+    try {
+      const res = await fetch(`${TICKETS_URL}/comments/${id}`, {
+        method: 'PUT', headers: tkHeaders(user.email, user.role),
+        body: JSON.stringify({ content: editingTicketCommentText }),
+      })
+      if (res.ok) { setEditingTicketCommentId(null); fetchTicketComments(selectedTicket.id) }
+    } catch { /* silent */ }
+  }
+
+  async function handleDeleteTicketComment(id) {
+    if (!window.confirm('Delete this comment?')) return
+    try {
+      await fetch(`${TICKETS_URL}/comments/${id}`, { method: 'DELETE', headers: tkHeaders(user.email, user.role) })
+      fetchTicketComments(selectedTicket.id)
+    } catch { /* silent */ }
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -227,7 +343,7 @@ const AdminDashboard = () => {
     setIsUpdatingUser(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/${editingUserId}`, {
+      const response = await fetch(`${USERS_API_URL}/${editingUserId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,7 +379,7 @@ const AdminDashboard = () => {
     setCrudStatus('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/${userToDelete.id}`, {
+      const response = await fetch(`${USERS_API_URL}/${userToDelete.id}`, {
         method: 'DELETE',
       })
 
@@ -433,14 +549,16 @@ const AdminDashboard = () => {
                   <button
                     key={section}
                     type="button"
-                    onClick={() => setActiveSection(section)}
+                    onClick={() => {
+                      setActiveSection(section)
+                    }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
                       isActive
                         ? 'bg-slate-900 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
-                    {section}
+                    {section === 'Tickets' ? '🎫 ' : ''}{section}
                   </button>
                 )
               })}
@@ -686,6 +804,229 @@ const AdminDashboard = () => {
                   >
                     {isNotificationSaving ? 'Saving...' : 'Save Preferences'}
                   </button>
+                </div>
+              ) : null}
+
+              {activeSection === 'Tickets' ? (
+                <div className="mt-5">
+                  {/* Stats row */}
+                  <div className="mb-4 grid grid-cols-4 gap-3">
+                    {[
+                      { label: 'Total', value: tickets.length, color: 'text-slate-900' },
+                      { label: 'Open', value: tickets.filter(t => t.status === 'OPEN').length, color: 'text-blue-700' },
+                      { label: 'In Progress', value: tickets.filter(t => t.status === 'IN_PROGRESS').length, color: 'text-amber-700' },
+                      { label: 'Resolved', value: tickets.filter(t => t.status === 'RESOLVED').length, color: 'text-green-700' },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs font-bold uppercase text-slate-400">{s.label}</p>
+                        <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Filter + refresh */}
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    {['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'].map(s => (
+                      <button key={s} onClick={() => setTicketFilterStatus(s)}
+                        className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                          ticketFilterStatus === s ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}>
+                        {s.replace('_', ' ')}
+                      </button>
+                    ))}
+                    <button onClick={fetchAllTickets} className="ml-auto rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">↻ Refresh</button>
+                  </div>
+
+                  {ticketMsg && <p className={`mb-3 text-sm font-semibold ${ticketMsg.includes('updated') || ticketMsg.includes('deleted') ? 'text-green-600' : 'text-red-600'}`}>{ticketMsg}</p>}
+
+                  {loadingTickets ? (
+                    <p className="py-10 text-center text-slate-500">Loading tickets…</p>
+                  ) : (
+                    <div className={`grid gap-5 ${selectedTicket ? 'lg:grid-cols-[1fr_1.5fr]' : ''}`}>
+
+                      {/* Ticket list */}
+                      <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                        {(ticketFilterStatus === 'ALL' ? tickets : tickets.filter(t => t.status === ticketFilterStatus)).length === 0 && (
+                          <p className="py-8 text-center text-slate-400">No tickets found.</p>
+                        )}
+                        {(ticketFilterStatus === 'ALL' ? tickets : tickets.filter(t => t.status === ticketFilterStatus)).map(t => {
+                          const sc = TICKET_STATUS_COLORS[t.status] || TICKET_STATUS_COLORS.OPEN
+                          const isSelected = selectedTicket?.id === t.id
+                          return (
+                            <div key={t.id} onClick={() => openTicketDetail(t)}
+                              className={`cursor-pointer rounded-2xl border p-4 transition hover:shadow-md ${
+                                isSelected ? 'border-slate-400 bg-slate-50' : 'border-slate-200 bg-white'
+                              }`}>
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-xs font-bold text-slate-400">#{t.id}</p>
+                                  <p className="mt-0.5 font-bold text-slate-900">{t.title}</p>
+                                  <p className="mt-1 text-xs text-slate-500">📍 {t.resource} · 🏷 {t.category}</p>
+                                  <p className="mt-0.5 text-xs text-slate-400">👤 {t.reporterEmail}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${sc.bg} ${sc.text}`}>{t.status.replace('_', ' ')}</span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{t.priority}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Detail panel */}
+                      {selectedTicket && (
+                        <div className="space-y-4">
+                          {/* Ticket info */}
+                          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs font-bold text-slate-400">TICKET #{selectedTicket.id}</p>
+                                <h3 className="mt-0.5 text-xl font-black text-slate-900">{selectedTicket.title}</h3>
+                                <p className="mt-1 text-sm text-slate-500">📍 {selectedTicket.resource} · 🏷 {selectedTicket.category} · ⬆ {selectedTicket.priority}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                {(() => { const sc = TICKET_STATUS_COLORS[selectedTicket.status] || TICKET_STATUS_COLORS.OPEN; return <span className={`rounded-full px-3 py-1 text-sm font-bold ${sc.bg} ${sc.text}`}>{selectedTicket.status.replace('_', ' ')}</span> })()}
+                                <button onClick={() => handleDeleteTicket(selectedTicket.id)} className="rounded-xl bg-red-100 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-200">Delete</button>
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl bg-slate-50 p-3 text-sm">
+                              <p className="text-xs font-bold uppercase text-slate-400">Description</p>
+                              <p className="mt-1 text-slate-700">{selectedTicket.description}</p>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-500">
+                              <p><b className="text-slate-700">Reporter:</b> {selectedTicket.reporterEmail}</p>
+                              <p><b className="text-slate-700">Assigned:</b> {selectedTicket.assignedToEmail || 'Unassigned'}</p>
+                              <p><b className="text-slate-700">Contact:</b> {selectedTicket.contactDetails || '—'}</p>
+                              <p><b className="text-slate-700">Created:</b> {fmtDate(selectedTicket.createdAt)}</p>
+                            </div>
+
+                            {selectedTicket.resolutionNotes && (
+                              <div className="mt-3 rounded-xl bg-green-50 p-3 text-sm">
+                                <p className="font-bold uppercase text-green-600" style={{fontSize:'0.7rem'}}>Resolution Notes</p>
+                                <p className="mt-1 text-green-800">{selectedTicket.resolutionNotes}</p>
+                              </div>
+                            )}
+                            {selectedTicket.rejectionReason && (
+                              <div className="mt-3 rounded-xl bg-red-50 p-3 text-sm">
+                                <p className="font-bold uppercase text-red-500" style={{fontSize:'0.7rem'}}>Rejection Reason</p>
+                                <p className="mt-1 text-red-700">{selectedTicket.rejectionReason}</p>
+                              </div>
+                            )}
+
+                            {(selectedTicket.imageUrl1 || selectedTicket.imageUrl2 || selectedTicket.imageUrl3) && (
+                              <div className="mt-3">
+                                <p className="mb-2 text-xs font-bold uppercase text-slate-400">Attachments</p>
+                                <div className="flex gap-2">
+                                  {[selectedTicket.imageUrl1, selectedTicket.imageUrl2, selectedTicket.imageUrl3].filter(Boolean).map((url, i) => (
+                                    <img key={i} src={url} alt={`Att${i+1}`} onClick={() => window.open(url,'_blank')}
+                                      className="h-16 w-24 cursor-pointer rounded-xl border border-slate-200 object-cover" />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Status update */}
+                          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                            <h4 className="mb-3 font-black text-slate-900">Update Status</h4>
+                            <form onSubmit={handleUpdateTicketStatus} className="space-y-3">
+                              <div className="flex flex-wrap gap-2">
+                                {TICKET_WORKFLOW.map((s, idx) => (
+                                  <button key={s} type="button" onClick={() => setTicketStatusForm(f => ({...f, status: s}))}
+                                    className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                                      ticketStatusForm.status === s ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    }`}>
+                                    {idx > 0 && <span className="mr-1 opacity-40">→</span>}{s.replace('_',' ')}
+                                  </button>
+                                ))}
+                                <button type="button" onClick={() => setTicketStatusForm(f => ({...f, status: 'REJECTED'}))}
+                                  className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                                    ticketStatusForm.status === 'REJECTED' ? 'bg-red-600 text-white' : 'border border-red-200 text-red-600 hover:bg-red-50'
+                                  }`}>✕ REJECT</button>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Assign To (email)</label>
+                                <input value={ticketStatusForm.assignedToEmail} onChange={e => setTicketStatusForm(f=>({...f, assignedToEmail: e.target.value}))}
+                                  placeholder="technician@smartcampus.com"
+                                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Resolution Notes</label>
+                                <textarea value={ticketStatusForm.resolutionNotes} onChange={e => setTicketStatusForm(f=>({...f, resolutionNotes:e.target.value}))}
+                                  rows={2} placeholder="Describe resolution steps…"
+                                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                              </div>
+
+                              {ticketStatusForm.status === 'REJECTED' && (
+                                <div>
+                                  <label className="mb-1 block text-xs font-bold uppercase text-red-500">Rejection Reason *</label>
+                                  <textarea required value={ticketStatusForm.rejectionReason} onChange={e => setTicketStatusForm(f=>({...f, rejectionReason:e.target.value}))}
+                                    rows={2} placeholder="Reason for rejection…"
+                                    className="w-full resize-none rounded-xl border border-red-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200" />
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-3">
+                                <button type="submit" disabled={updatingTicket}
+                                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
+                                  {updatingTicket ? 'Saving…' : '✓ Save Update'}
+                                </button>
+                                {ticketMsg && <p className={`text-sm font-semibold ${ticketMsg.includes('updated') ? 'text-green-600' : 'text-red-600'}`}>{ticketMsg}</p>}
+                              </div>
+                            </form>
+                          </div>
+
+                          {/* Comments */}
+                          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                            <h4 className="mb-4 font-black text-slate-900">💬 Comments</h4>
+                            <div className="mb-4 max-h-48 space-y-3 overflow-y-auto">
+                              {ticketComments.length === 0 && <p className="text-sm text-slate-400">No comments yet.</p>}
+                              {ticketComments.map(c => {
+                                const isOwn = c.authorEmail === user.email
+                                return (
+                                  <div key={c.id} className={`rounded-xl border p-3 ${isOwn ? 'border-slate-300 bg-slate-50' : 'border-slate-200'}`}>
+                                    {editingTicketCommentId === c.id ? (
+                                      <div>
+                                        <textarea value={editingTicketCommentText} onChange={e=>setEditingTicketCommentText(e.target.value)} rows={2}
+                                          className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none" />
+                                        <div className="flex gap-2">
+                                          <button onClick={() => handleUpdateTicketComment(c.id)} className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-bold text-white">Save</button>
+                                          <button onClick={() => setEditingTicketCommentId(null)} className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Cancel</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="mb-1 flex justify-between">
+                                          <span className="text-xs font-bold text-slate-600">{c.authorEmail} <span className="font-normal text-slate-400">({c.authorRole})</span></span>
+                                          <span className="text-xs text-slate-400">{fmtDate(c.createdAt)}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-700">{c.content}</p>
+                                        <div className="mt-2 flex gap-2">
+                                          {isOwn && <button onClick={() => {setEditingTicketCommentId(c.id); setEditingTicketCommentText(c.content)}} className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-bold text-white">Edit</button>}
+                                          <button onClick={() => handleDeleteTicketComment(c.id)} className="rounded-lg bg-red-500 px-3 py-1 text-xs font-bold text-white">Delete</button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            <div className="flex gap-3">
+                              <textarea value={ticketCommentText} onChange={e=>setTicketCommentText(e.target.value)}
+                                placeholder="Add a comment…" rows={2}
+                                className="flex-1 resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                              <button onClick={handleAddTicketComment} className="rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800">Post</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : null}
             </section>

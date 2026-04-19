@@ -44,6 +44,7 @@ const ManagerDashboard = () => {
 
           <div className="mt-6 space-y-2 text-sm text-amber-50">
             <p className="rounded-xl bg-white/10 px-3 py-2 font-semibold">Reports</p>
+            <button onClick={() => navigate('/admin/tickets')} className="w-full rounded-xl px-3 py-2 text-left hover:bg-white/10">🎫 Ticket Management</button>
             <p className="rounded-xl px-3 py-2 hover:bg-white/10">Approvals</p>
             <p className="rounded-xl px-3 py-2 hover:bg-white/10">Escalations</p>
           </div>

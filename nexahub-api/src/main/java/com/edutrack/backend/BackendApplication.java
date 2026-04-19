@@ -1,13 +1,6 @@
 package com.edutrack.backend;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
+// This class is no longer the main application class after merge conflict resolution.
+// Spring Boot will use com.nexahub.nexahub_api.NexahubApiApplication instead.
 public class BackendApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(BackendApplication.class, args);
-	}
-
 }
