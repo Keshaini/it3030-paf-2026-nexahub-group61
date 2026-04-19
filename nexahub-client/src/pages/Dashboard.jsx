@@ -454,8 +454,10 @@ const Dashboard = () => {
                     <div>
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Title *</label>
                       <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                        maxLength={30}
                         placeholder="e.g. Projector not working in Hall A3"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                        className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300 ${form.title.length >= 30 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`} />
+                      {form.title.length >= 30 && <p className="mt-1 text-xs font-bold text-red-500">Title cannot exceed 30 characters.</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Location / Resource *</label>
@@ -466,28 +468,37 @@ const Dashboard = () => {
                     <div>
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Category *</label>
                       <select required value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                        {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-slate-300">
+                        {CATEGORIES.map(c => <option key={c} value={c} className="font-semibold text-slate-800">{c.replace('_', ' ')}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Priority *</label>
                       <select required value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-slate-300">
+                        {PRIORITIES.map(p => <option key={p} value={p} className="font-semibold text-slate-800">{p}</option>)}
                       </select>
                     </div>
                     <div className="sm:col-span-2">
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Description *</label>
                       <textarea required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                        maxLength={150}
                         placeholder="Describe the issue in detail…" rows={3}
-                        className="w-full resize-vertical rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                        className={`w-full resize-vertical rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300 ${form.description.length >= 150 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`} />
+                      {form.description.length >= 150 && <p className="mt-1 text-xs font-bold text-red-500">Description cannot exceed 150 characters.</p>}
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Preferred Contact</label>
-                      <input value={form.contactDetails} onChange={e => setForm({ ...form, contactDetails: e.target.value })}
-                        placeholder="Phone or email for follow-up"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                      <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Contact Number</label>
+                      <input value={form.contactDetails} onChange={e => setForm({ ...form, contactDetails: e.target.value.replace(/\D/g, '') })}
+                        type="tel"
+                        pattern="\d{10}"
+                        maxLength={10}
+                        title="Phone number must be exactly 10 digits"
+                        placeholder="e.g. 0712345678"
+                        className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300 ${form.contactDetails.length > 0 && form.contactDetails.length < 10 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`} />
+                      {form.contactDetails.length > 0 && form.contactDetails.length < 10 && (
+                        <p className="mt-1 text-xs font-bold text-red-500">Phone number must be exactly 10 digits.</p>
+                      )}
                     </div>
 
                     {/* Image uploads */}
