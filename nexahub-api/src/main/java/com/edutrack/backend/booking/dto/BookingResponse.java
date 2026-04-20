@@ -28,6 +28,7 @@ public record BookingResponse(
         String reviewedByName,
         String rejectionReason,
         String cancellationReason,
+        boolean requesterArchived,
         LocalDateTime reviewedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -57,6 +58,7 @@ public record BookingResponse(
                 reviewer != null ? reviewer.getFullName() : null,
                 booking.getRejectionReason(),
                 booking.getCancellationReason(),
+                booking.isRequesterArchived(),
                 booking.getReviewedAt(),
                 booking.getCreatedAt(),
                 booking.getUpdatedAt()

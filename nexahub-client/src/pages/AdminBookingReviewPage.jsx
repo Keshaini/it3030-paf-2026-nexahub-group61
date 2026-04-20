@@ -2,11 +2,12 @@ import { Navigate, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '../assets/edutrack.png'
 import { getAuthUser } from '../auth/roles.js'
-import { approveBooking, cancelBooking, fetchAllBookings, fetchResources, rejectBooking } from '../bookings/api.js'
+import { approveBooking, cancelBooking, deleteBookingAsAdmin, fetchAllBookings, fetchResources, rejectBooking } from '../bookings/api.js'
 import { formatBookingDate, formatDateTime, formatTimeRange } from '../bookings/format.js'
 import { bookingStatusOptions } from '../bookings/status.js'
 import AdminPanelSidebar from '../components/AdminPanelSidebar.jsx'
 import BookingStatusBadge from '../components/BookingStatusBadge.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import ReasonDialog from '../components/ReasonDialog.jsx'
 
 const AdminBookingReviewPage = () => {
@@ -24,6 +25,7 @@ const AdminBookingReviewPage = () => {
   const [statusMessage, setStatusMessage] = useState('')
   const [rejectTarget, setRejectTarget] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const loadResources = async () => {
     try {
@@ -153,6 +155,31 @@ const AdminBookingReviewPage = () => {
     }
   }
 
+  const handleDelete = (booking) => {
+    setStatusMessage('')
+    setDeleteTarget(booking)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) {
+      return
+    }
+
+    setActionKey(`delete-${deleteTarget.id}`)
+    setStatusMessage('')
+
+    try {
+      await deleteBookingAsAdmin(deleteTarget.id, user.email)
+      setDeleteTarget(null)
+      setStatusMessage('Booking deleted from the database.')
+      await loadBookings()
+    } catch (error) {
+      setStatusMessage(error.message || 'Delete failed.')
+    } finally {
+      setActionKey('')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fef3c7_0%,#fff7ed_28%,#eff6ff_100%)] p-3 sm:p-5">
       <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/60 bg-white/85 p-4 shadow-2xl backdrop-blur sm:p-6">
@@ -249,6 +276,7 @@ const AdminBookingReviewPage = () => {
               const approveKey = `approve-${booking.id}`
               const rejectKey = `reject-${booking.id}`
               const cancelKey = `cancel-${booking.id}`
+              const deleteKey = `delete-${booking.id}`
 
               return (
                 <article key={booking.id} className="rounded-[1.5rem] border border-slate-200 p-5">
@@ -300,6 +328,10 @@ const AdminBookingReviewPage = () => {
                     {booking.cancellationReason ? (
                       <p className="mt-3 text-sm text-slate-700">Cancellation note: {booking.cancellationReason}</p>
                     ) : null}
+
+                    {booking.requesterArchived ? (
+                      <p className="mt-3 text-sm font-medium text-amber-700">Requester removed this booking from their history. Delete it here to remove it from the database.</p>
+                    ) : null}
                   </div>
 
                   <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -332,6 +364,17 @@ const AdminBookingReviewPage = () => {
                         className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                       >
                         {actionKey === cancelKey ? 'Cancelling...' : 'Cancel'}
+                      </button>
+                    ) : null}
+
+                    {['PENDING', 'REJECTED', 'CANCELLED'].includes(booking.status) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(booking)}
+                        disabled={actionKey === deleteKey}
+                        className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                      >
+                        {actionKey === deleteKey ? 'Deleting...' : 'Delete permanently'}
                       </button>
                     ) : null}
                   </div>
@@ -382,6 +425,28 @@ const AdminBookingReviewPage = () => {
         }}
         onSubmit={handleCancelSubmit}
       />
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        title="Delete booking permanently"
+        description="This removes the booking record from the database for both the requester and the admin review console."
+        confirmLabel={actionKey === `delete-${deleteTarget?.id}` ? 'Deleting...' : 'Delete permanently'}
+        confirmTone="danger"
+        isBusy={Boolean(deleteTarget) && actionKey === `delete-${deleteTarget?.id}`}
+        onClose={() => {
+          if (!actionKey.startsWith('delete-')) {
+            setDeleteTarget(null)
+          }
+        }}
+        onConfirm={handleDeleteConfirm}
+      >
+        {deleteTarget ? (
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-900">{deleteTarget.resourceName}</p>
+            <p>{formatBookingDate(deleteTarget.bookingDate)} at {formatTimeRange(deleteTarget.startTime, deleteTarget.endTime)}</p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   )
 }

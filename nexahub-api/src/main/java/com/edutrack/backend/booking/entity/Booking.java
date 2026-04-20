@@ -65,6 +65,9 @@ public class Booking {
     @Column(length = 255)
     private String cancellationReason;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean requesterArchived;
+
     private LocalDateTime reviewedAt;
 
     @Column(nullable = false)
@@ -173,6 +176,14 @@ public class Booking {
         this.reviewedAt = reviewedAt;
     }
 
+    public boolean isRequesterArchived() {
+        return Boolean.TRUE.equals(requesterArchived);
+    }
+
+    public void setRequesterArchived(Boolean requesterArchived) {
+        this.requesterArchived = requesterArchived;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -188,6 +199,9 @@ public class Booking {
         this.updatedAt = now;
         if (this.status == null) {
             this.status = BookingStatus.PENDING;
+        }
+        if (this.requesterArchived == null) {
+            this.requesterArchived = false;
         }
     }
 

@@ -58,6 +58,10 @@ export const deleteBooking = (bookingId, requesterEmail) => request(`/api/bookin
   method: 'DELETE',
 })
 
+export const deleteBookingAsAdmin = (bookingId, actorEmail) => request(`/api/bookings/${bookingId}/admin${buildQuery({ actorEmail })}`, {
+  method: 'DELETE',
+})
+
 export const cancelBooking = (bookingId, actorEmail, reason) => request(`/api/bookings/${bookingId}/cancel`, {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' },

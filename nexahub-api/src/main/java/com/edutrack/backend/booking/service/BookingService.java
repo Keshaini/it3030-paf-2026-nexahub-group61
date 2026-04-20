@@ -201,8 +201,25 @@ public class BookingService {
             throw new BookingException("Only the requester can delete this booking");
         }
 
-        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.REJECTED) {
-            throw new BookingException("Only pending or rejected bookings can be deleted");
+        if (booking.getStatus() != BookingStatus.PENDING
+                && booking.getStatus() != BookingStatus.REJECTED
+                && booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new BookingException("Only pending, rejected, or cancelled bookings can be deleted");
+        }
+
+        booking.setRequesterArchived(true);
+        bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public void deleteBookingAsAdmin(Long bookingId, String actorEmail) {
+        Booking booking = requireDetailedBooking(bookingId);
+        requireAdmin(actorEmail);
+
+        if (booking.getStatus() != BookingStatus.PENDING
+                && booking.getStatus() != BookingStatus.REJECTED
+                && booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new BookingException("Only pending, rejected, or cancelled bookings can be deleted by an admin");
         }
 
         bookingRepository.delete(booking);

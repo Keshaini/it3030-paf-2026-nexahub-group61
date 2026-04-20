@@ -221,7 +221,7 @@ const BookingPage = () => {
 
     try {
       await deleteBooking(deleteTarget.id, user.email)
-      setPageStatus(`Booking for ${deleteTarget.resourceName} was deleted.`)
+      setPageStatus(`Booking for ${deleteTarget.resourceName} was removed from your history. The admin can still delete it permanently.`)
       setDeleteTarget(null)
 
       if (editingBookingId === deleteTarget.id) {
@@ -543,7 +543,7 @@ const BookingPage = () => {
                         ) : null}
                       </div>
 
-                      {['PENDING', 'APPROVED', 'REJECTED'].includes(booking.status) ? (
+                      {['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].includes(booking.status) ? (
                         <div className="mt-4 flex justify-end gap-2">
                           {booking.status === 'PENDING' ? (
                             <button
@@ -566,7 +566,7 @@ const BookingPage = () => {
                             </button>
                           ) : null}
 
-                          {['PENDING', 'REJECTED'].includes(booking.status) ? (
+                          {['PENDING', 'REJECTED', 'CANCELLED'].includes(booking.status) ? (
                             <button
                               type="button"
                               onClick={() => handleDeleteBooking(booking)}
@@ -611,7 +611,7 @@ const BookingPage = () => {
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)}
         title="Delete booking request"
-        description="Delete only requests you no longer need. This permanently removes the booking record from your history."
+        description="Delete only requests you no longer need. This removes the booking from your history, but the admin can still review and delete it permanently."
         confirmLabel={actionKey === `delete-${deleteTarget?.id}` ? 'Deleting...' : 'Delete booking'}
         confirmTone="danger"
         isBusy={Boolean(deleteTarget) && actionKey === `delete-${deleteTarget?.id}`}

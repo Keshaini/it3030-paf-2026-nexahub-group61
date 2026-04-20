@@ -29,6 +29,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         join fetch b.requestedBy u
         left join fetch b.reviewedBy rv
         where lower(u.email) = lower(:email)
+          and coalesce(b.requesterArchived, false) = false
           and (:status is null or b.status = :status)
         order by b.bookingDate desc, b.startTime desc, b.createdAt desc
         """)

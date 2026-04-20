@@ -78,6 +78,15 @@ public class BookingController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{bookingId}/admin")
+    public ResponseEntity<Void> deleteBookingAsAdmin(
+            @PathVariable Long bookingId,
+            @RequestParam @NotBlank @Email String actorEmail
+    ) {
+        bookingService.deleteBookingAsAdmin(bookingId, actorEmail);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{bookingId}/approve")
     public ResponseEntity<BookingResponse> approveBooking(
             @PathVariable Long bookingId,
