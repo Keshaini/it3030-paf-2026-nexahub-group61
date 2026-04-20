@@ -74,6 +74,37 @@ public class TicketService {
         return TicketDto.fromEntity(findTicketOrThrow(id));
     }
 
+    // ── Update Details ────────────────────────────────────────────────────────
+
+    @Transactional
+    public TicketDto updateTicket(Long id, UpdateTicketRequest request, String callerEmail, String callerRole) {
+        Ticket ticket = findTicketOrThrow(id);
+        
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(callerRole) || "MANAGER".equalsIgnoreCase(callerRole);
+        if (!isAdmin && !ticket.getReporterEmail().equalsIgnoreCase(callerEmail)) {
+            throw new SecurityException("You can only update your own tickets");
+        }
+
+        // Standard requirement: Can only edit if ticket is OPEN (optional, but good practice). Or maybe we just let them edit.
+        // Let's allow edit if it's OPEN.
+        if (!isAdmin && !"OPEN".equalsIgnoreCase(ticket.getStatus())) {
+            throw new IllegalArgumentException("You can only edit tickets that are OPEN.");
+        }
+
+        ticket.setTitle(request.title().trim());
+        ticket.setResource(request.resource().trim());
+        ticket.setCategory(request.category().trim().toUpperCase(Locale.ROOT));
+        ticket.setDescription(request.description().trim());
+        ticket.setPriority(request.priority().trim().toUpperCase(Locale.ROOT));
+        ticket.setContactDetails(request.contactDetails() != null ? request.contactDetails().trim() : null);
+
+        if (request.imageBase64_1() != null) ticket.setImageUrl1(request.imageBase64_1());
+        if (request.imageBase64_2() != null) ticket.setImageUrl2(request.imageBase64_2());
+        if (request.imageBase64_3() != null) ticket.setImageUrl3(request.imageBase64_3());
+
+        return TicketDto.fromEntity(ticketRepository.save(ticket));
+    }
+
     // ── Update Status ─────────────────────────────────────────────────────────
 
     @Transactional

@@ -64,6 +64,16 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.updateTicketStatus(id, request, email, role));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketDto> updateTicket(
+        @PathVariable Long id,
+        @Valid @RequestBody UpdateTicketRequest request,
+        @RequestHeader("X-User-Email") String email,
+        @RequestHeader("X-User-Role") String role
+    ) {
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, email, role));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTicket(
         @PathVariable Long id,
