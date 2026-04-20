@@ -3,124 +3,332 @@ import { resourcesApi } from "../api/resourcesApi";
 import ResourceCard from "../components/ResourceCard";
 
 const TYPES = ["", "LECTURE_HALL", "LAB", "MEETING_ROOM", "EQUIPMENT"];
+
 const TYPE_LABELS = {
-  "": "All types", LECTURE_HALL: "Lecture Hall",
-  LAB: "Lab", MEETING_ROOM: "Meeting Room", EQUIPMENT: "Equipment",
+  "": "All types",
+  LECTURE_HALL: "Lecture Hall",
+  LAB: "Lab",
+  MEETING_ROOM: "Meeting Room",
+  EQUIPMENT: "Equipment",
 };
 
 export default function ResourcesPage() {
-  const [resources,    setResources]    = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
-  const [filters,      setFilters]      = useState({
-    type: "", location: "", minCapacity: "",
+  const { isAdmin } = useAuth();
+
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [filters, setFilters] = useState({
+    type: "",
+    location: "",
+    minCapacity: "",
+    sort: "name",
+  });
+
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    location: "",
+    capacity: "",
+    type: "LECTURE_HALL",
   });
 
   useEffect(() => {
-    setLoading(true);
-    resourcesApi.getAll({
-      type:        filters.type        || undefined,
-      location:    filters.location    || undefined,
-      minCapacity: filters.minCapacity || undefined,
-      status:      "ACTIVE",
-    })
-      .then(setResources)
-      .catch(() => setError("Failed to load resources"))
-      .finally(() => setLoading(false));
+    loadResources();
   }, [filters]);
 
-  const setFilter = (key) => (e) =>
-    setFilters(f => ({ ...f, [key]: e.target.value }));
+  const loadResources = () => {
+    setLoading(true);
 
-  const inputStyle = {
-    padding: "7px 12px", fontSize: "13px",
-    border: "1px solid var(--color-border-secondary)",
-    borderRadius: "8px", background: "var(--color-background-primary)",
-    color: "var(--color-text-primary)", outline: "none",
+    resourcesApi
+      .getAll({
+        type: filters.type || undefined,
+        location: filters.location || undefined,
+        minCapacity: filters.minCapacity || undefined,
+        status: "ACTIVE",
+      })
+      .then((data) => {
+        let sorted = [...data];
+
+        if (filters.sort === "name") {
+          sorted.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        if (filters.sort === "capacity") {
+          sorted.sort((a, b) => (b.capacity || 0) - (a.capacity || 0));
+        }
+
+        setResources(sorted);
+      })
+      .catch(() => setError("Failed to load resources"))
+      .finally(() => setLoading(false));
+  };
+
+  const setFilter = (key) => (e) =>
+    setFilters((f) => ({ ...f, [key]: e.target.value }));
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({
+      name: "",
+      location: "",
+      capacity: "",
+      type: "LECTURE_HALL",
+    });
+    setShowForm(true);
+  };
+
+  const openEdit = (resource) => {
+    setEditing(resource);
+    setForm(resource);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      if (editing) {
+        await resourcesApi.update(editing.id, form);
+      } else {
+        await resourcesApi.create(form);
+      }
+      setShowForm(false);
+      loadResources();
+    } catch (err) {
+      alert("Error saving resource");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this resource?")) return;
+
+    try {
+      await resourcesApi.delete(id);
+      loadResources();
+    } catch (err) {
+      alert("Delete failed");
+    }
   };
 
   return (
-    <div style={{ maxWidth: "960px", margin: "0 auto", padding: "32px 24px" }}>
+    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "32px 20px" }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: 500, margin: "0 0 4px",
-          color: "var(--color-text-primary)" }}>
-          Resources catalogue
+      {/* HEADER */}
+      <div style={{ marginBottom: "20px" }}>
+        <h1 style={{ fontSize: "22px", fontWeight: 600 }}>
+          Resources Catalogue
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: 0 }}>
-          Browse and book lecture halls, labs, meeting rooms and equipment.
+        <p style={{ color: "#6b7280", fontSize: "14px" }}>
+          Search, filter and manage university resources
         </p>
       </div>
 
-      {/* Filters */}
-      <div style={{
-        display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px",
-      }}>
-        <select value={filters.type} onChange={setFilter("type")} style={inputStyle}>
-          {TYPES.map(t => (
-            <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+      {/* ADMIN ACTION */}
+      {isAdmin && (
+        <button onClick={openCreate} style={primaryBtn}>
+          + Add Resource
+        </button>
+      )}
+
+      {/* FILTERS */}
+      <div style={filterBox}>
+        <select value={filters.type} onChange={setFilter("type")} style={input}>
+          {TYPES.map((t) => (
+            <option key={t} value={t}>
+              {TYPE_LABELS[t]}
+            </option>
           ))}
         </select>
 
         <input
-          value={filters.location} onChange={setFilter("location")}
-          placeholder="Filter by location"
-          style={{ ...inputStyle, minWidth: "180px" }}
+          placeholder="Location"
+          value={filters.location}
+          onChange={setFilter("location")}
+          style={input}
         />
 
         <input
-          type="number" min="1"
-          value={filters.minCapacity} onChange={setFilter("minCapacity")}
+          type="number"
           placeholder="Min capacity"
-          style={{ ...inputStyle, width: "130px" }}
+          value={filters.minCapacity}
+          onChange={setFilter("minCapacity")}
+          style={input}
         />
 
-        {(filters.type || filters.location || filters.minCapacity) && (
-          <button
-            onClick={() => setFilters({ type: "", location: "", minCapacity: "" })}
-            style={{
-              padding: "7px 14px", fontSize: "13px", cursor: "pointer",
-              border: "1px solid var(--color-border-secondary)",
-              borderRadius: "8px", background: "none",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            Clear filters
-          </button>
-        )}
+        <select value={filters.sort} onChange={setFilter("sort")} style={input}>
+          <option value="name">Sort: Name</option>
+          <option value="capacity">Sort: Capacity</option>
+        </select>
       </div>
 
-      {/* Results */}
+      {/* CONTENT */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "48px",
-          color: "var(--color-text-tertiary)", fontSize: "14px" }}>
-          Loading resources…
-        </div>
+        <div style={center}>Loading...</div>
       ) : error ? (
-        <div style={{ padding: "16px", borderRadius: "8px",
-          background: "#FCEBEB", color: "#A32D2D", fontSize: "13px" }}>
-          {error}
-        </div>
+        <div style={errorBox}>{error}</div>
       ) : resources.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px",
-          color: "var(--color-text-tertiary)", fontSize: "14px" }}>
-          No resources found matching your filters.
-        </div>
+        <div style={center}>No resources found</div>
       ) : (
-        <>
-          <div style={{ fontSize: "12px", color: "var(--color-text-tertiary)", marginBottom: "12px" }}>
-            {resources.length} resource{resources.length !== 1 ? "s" : ""} found
+        <div style={grid}>
+          {resources.map((r) => (
+            <div key={r.id} style={{ position: "relative" }}>
+              <ResourceCard resource={r} />
+
+              {isAdmin && (
+                <div style={adminActions}>
+                  <button onClick={() => openEdit(r)} style={smallBtn}>
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    style={dangerBtn}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* MODAL */}
+      {showForm && (
+        <div style={modalOverlay}>
+          <div style={modal}>
+            <h3>{editing ? "Edit Resource" : "Add Resource"}</h3>
+
+            <input
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              style={input}
+            />
+
+            <input
+              placeholder="Location"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              style={input}
+            />
+
+            <input
+              type="number"
+              placeholder="Capacity"
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+              style={input}
+            />
+
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              style={input}
+            >
+              {TYPES.filter((t) => t).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button onClick={handleSave} style={primaryBtn}>
+                Save
+              </button>
+              <button onClick={() => setShowForm(false)} style={cancelBtn}>
+                Cancel
+              </button>
+            </div>
           </div>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: "12px",
-          }}>
-            {resources.map(r => <ResourceCard key={r.id} resource={r} />)}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
 }
+
+/* STYLES */
+
+const input = {
+  padding: "8px",
+  borderRadius: "8px",
+  border: "1px solid #ddd",
+};
+
+const primaryBtn = {
+  padding: "8px 12px",
+  background: "#2563eb",
+  color: "#fff",
+  border: "none",
+  borderRadius: "8px",
+  marginBottom: "12px",
+};
+
+const cancelBtn = {
+  padding: "8px 12px",
+  background: "#e5e7eb",
+  border: "none",
+  borderRadius: "8px",
+};
+
+const filterBox = {
+  display: "flex",
+  gap: "10px",
+  marginBottom: "15px",
+  flexWrap: "wrap",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+  gap: "12px",
+};
+
+const center = {
+  textAlign: "center",
+  padding: "40px",
+  color: "#6b7280",
+};
+
+const errorBox = {
+  background: "#fee2e2",
+  padding: "10px",
+  borderRadius: "8px",
+};
+
+const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
+
+const modal = {
+  background: "#fff",
+  padding: "20px",
+  borderRadius: "12px",
+  width: "320px",
+};
+
+const adminActions = {
+  display: "flex",
+  gap: "6px",
+  marginTop: "6px",
+};
+
+const smallBtn = {
+  fontSize: "12px",
+  padding: "4px 8px",
+};
+
+const dangerBtn = {
+  fontSize: "12px",
+  padding: "4px 8px",
+  background: "#fee2e2",
+  color: "#991b1b",
+  border: "none",
+};

@@ -1,17 +1,17 @@
 import { Link } from "react-router-dom";
 
 const TYPE_COLORS = {
-  LECTURE_HALL: { bg: "#E6F1FB", text: "#185FA5" },
-  LAB:          { bg: "#E1F5EE", text: "#0F6E56" },
-  MEETING_ROOM: { bg: "#EEEDFE", text: "#534AB7" },
-  EQUIPMENT:    { bg: "#FAEEDA", text: "#854F0B" },
+  LECTURE_HALL: { bg: "#E8F2FF", text: "#1D4ED8" },
+  LAB:          { bg: "#E6F9F1", text: "#047857" },
+  MEETING_ROOM: { bg: "#F3F0FF", text: "#6D28D9" },
+  EQUIPMENT:    { bg: "#FFF4E5", text: "#B45309" },
 };
 
 const TYPE_LABELS = {
   LECTURE_HALL: "Lecture Hall",
-  LAB:          "Lab",
+  LAB: "Lab",
   MEETING_ROOM: "Meeting Room",
-  EQUIPMENT:    "Equipment",
+  EQUIPMENT: "Equipment",
 };
 
 export default function ResourceCard({ resource }) {
@@ -19,59 +19,111 @@ export default function ResourceCard({ resource }) {
 
   return (
     <Link to={`/resources/${resource.id}`} style={{ textDecoration: "none" }}>
-      <div style={{
-        background: "var(--color-background-primary)",
-        border: "1px solid var(--color-border-tertiary)",
-        borderRadius: "12px", padding: "18px 20px",
-        cursor: "pointer",
-      }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-border-secondary)"}
-        onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border-tertiary)"}
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: "14px",
+          padding: "16px",
+          transition: "all 0.25s ease",
+          cursor: "pointer",
+          position: "relative",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-4px)";
+          e.currentTarget.style.boxShadow =
+            "0 10px 25px rgba(0,0,0,0.08)";
+          e.currentTarget.style.borderColor = "#d1d5db";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "none";
+          e.currentTarget.style.borderColor = "#e5e7eb";
+        }}
       >
-        {/* Type badge + status */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-          <span style={{
-            fontSize: "11px", fontWeight: 500, padding: "2px 8px",
-            borderRadius: "10px", background: color.bg, color: color.text,
-          }}>
+        {/* TOP ROW */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          {/* TYPE BADGE */}
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 600,
+              padding: "4px 10px",
+              borderRadius: "999px",
+              background: color.bg,
+              color: color.text,
+            }}
+          >
             {TYPE_LABELS[resource.type]}
           </span>
-          <span style={{
-            fontSize: "11px", fontWeight: 500, padding: "2px 8px", borderRadius: "10px",
-            background: resource.status === "ACTIVE" ? "#E1F5EE" : "#FCEBEB",
-            color:      resource.status === "ACTIVE" ? "#0F6E56" : "#A32D2D",
-          }}>
-            {resource.status === "ACTIVE" ? "Available" : "Out of service"}
+
+          {/* STATUS BADGE */}
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 600,
+              padding: "4px 10px",
+              borderRadius: "999px",
+              background:
+                resource.status === "ACTIVE" ? "#DCFCE7" : "#FEE2E2",
+              color:
+                resource.status === "ACTIVE" ? "#166534" : "#991B1B",
+            }}
+          >
+            {resource.status === "ACTIVE" ? "Available" : "Unavailable"}
           </span>
         </div>
 
-        {/* Name */}
-        <div style={{
-          fontSize: "15px", fontWeight: 500,
-          color: "var(--color-text-primary)", marginBottom: "4px",
-        }}>
+        {/* TITLE */}
+        <div
+          style={{
+            fontSize: "15px",
+            fontWeight: 600,
+            color: "#111827",
+            marginBottom: "4px",
+          }}
+        >
           {resource.name}
         </div>
 
-        {/* Location */}
-        <div style={{
-          fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "8px",
-        }}>
-          {resource.location}
+        {/* LOCATION */}
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#6b7280",
+            marginBottom: "10px",
+          }}
+        >
+          📍 {resource.location}
         </div>
 
-        {/* Capacity + availability */}
-        <div style={{ display: "flex", gap: "12px" }}>
-          {resource.capacity && (
-            <span style={{ fontSize: "12px", color: "var(--color-text-tertiary)" }}>
-              Capacity: {resource.capacity}
-            </span>
-          )}
-          {resource.availabilityStart && (
-            <span style={{ fontSize: "12px", color: "var(--color-text-tertiary)" }}>
-              {resource.availabilityStart} – {resource.availabilityEnd}
-            </span>
-          )}
+        {/* DETAILS BOX */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "12px",
+            color: "#6b7280",
+            paddingTop: "10px",
+            borderTop: "1px dashed #e5e7eb",
+          }}
+        >
+          <span>
+            👥 {resource.capacity ? `${resource.capacity} seats` : "N/A"}
+          </span>
+
+          <span>
+            🕒{" "}
+            {resource.availabilityStart
+              ? `${resource.availabilityStart} - ${resource.availabilityEnd}`
+              : "Flexible"}
+          </span>
         </div>
       </div>
     </Link>
