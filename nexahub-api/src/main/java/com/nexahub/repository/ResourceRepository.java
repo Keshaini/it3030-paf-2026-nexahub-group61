@@ -25,14 +25,14 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
 
     // Search by name or location (case-insensitive)
     @Query("SELECT r FROM Resource r WHERE " +
-           "(:type IS NULL OR r.type = :type) AND " +
-           "(:status IS NULL OR r.status = :status) AND " +
-           "(:location IS NULL OR LOWER(r.location) LIKE LOWER(CONCAT('%', :location, '%'))) AND " +
-           "(:minCapacity IS NULL OR r.capacity >= :minCapacity)")
-    List<Resource> search(
-        @Param("type")        ResourceType   type,
-        @Param("status")      ResourceStatus status,
-        @Param("location")    String         location,
-        @Param("minCapacity") Integer        minCapacity
-    );
+       "(:type IS NULL OR r.type = :type) AND " +
+       "(:status IS NULL OR r.status = :status) AND " +
+       "(:location IS NULL OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:location AS string), '%'))) AND " +
+       "(:minCapacity IS NULL OR r.capacity >= :minCapacity)")
+List<Resource> search(
+    @Param("type")        ResourceType   type,
+    @Param("status")      ResourceStatus status,
+    @Param("location")    String         location,
+    @Param("minCapacity") Integer        minCapacity
+);
 }
