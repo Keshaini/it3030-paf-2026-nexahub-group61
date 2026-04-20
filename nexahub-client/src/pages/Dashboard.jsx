@@ -209,6 +209,24 @@ const Dashboard = () => {
     finally { setSubmitting(false) }
   }
 
+  async function handleUpdateTicket(e) {
+    e.preventDefault()
+    setSubmitting(true); setTicketError(''); setTicketSuccess('')
+    try {
+      const res = await fetch(`${TICKETS_URL}/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: authHeaders(user),
+        body: JSON.stringify({ ...form, imageBase64_1: images[0], imageBase64_2: images[1], imageBase64_3: images[2] }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTicketError(data.message || 'Failed to update ticket.'); return }
+      setTicketSuccess('Ticket updated successfully!')
+      fetchMyTickets()
+      setTimeout(() => { setTicketSuccess(''); setTicketView('list') }, 1500)
+    } catch { setTicketError('Cannot connect to server.') }
+    finally { setSubmitting(false) }
+  }
+
   async function handleAddComment() {
     if (!commentText.trim()) return
     try {
@@ -427,8 +445,8 @@ const Dashboard = () => {
                   <p className="text-sm text-slate-500">Raise and track your maintenance & incident reports.</p>
                 </div>
                 <div className="flex gap-2">
-                  {ticketView !== 'create' && (
-                    <button onClick={() => { setTicketView('create'); setTicketError(''); setTicketSuccess('') }}
+                  {ticketView !== 'create' && ticketView !== 'edit' && (
+                    <button onClick={() => { setForm(emptyForm); setImages([null, null, null]); setTicketView('create'); setTicketError(''); setTicketSuccess('') }}
                       className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">
                       + Raise Ticket
                     </button>
@@ -447,9 +465,9 @@ const Dashboard = () => {
               {ticketError && <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{ticketError}</div>}
               {ticketSuccess && <div className="mb-4 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 font-semibold">{ticketSuccess}</div>}
 
-              {/* ── Create form ──────────────────────────────────────────── */}
-              {ticketView === 'create' && (
-                <form onSubmit={handleCreateTicket} className="space-y-4">
+              {/* ── Create / Edit form ──────────────────────────────────────────── */}
+              {(ticketView === 'create' || ticketView === 'edit') && (
+                <form onSubmit={ticketView === 'edit' ? handleUpdateTicket : handleCreateTicket} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-bold uppercase text-slate-500">Title *</label>
@@ -529,7 +547,7 @@ const Dashboard = () => {
                   <div className="flex gap-3 pt-2">
                     <button type="submit" disabled={submitting}
                       className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
-                      {submitting ? 'Submitting…' : '🎫 Submit Ticket'}
+                      {submitting ? 'Saving…' : ticketView === 'edit' ? 'Update Ticket' : '🎫 Submit Ticket'}
                     </button>
                     <button type="button" onClick={() => setTicketView('list')}
                       className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
@@ -604,10 +622,31 @@ const Dashboard = () => {
                         <h2 className="mt-0.5 text-2xl font-black text-slate-900">{selectedTicket.title}</h2>
                         <p className="mt-1 text-sm text-slate-500">📍 {selectedTicket.resource} · 🏷 {selectedTicket.category} · ⬆ {selectedTicket.priority}</p>
                       </div>
-                      {(() => {
-                        const sc = STATUS_COLORS[selectedTicket.status] || STATUS_COLORS.OPEN
-                        return <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${sc.bg} ${sc.text}`}>{selectedTicket.status.replace('_', ' ')}</span>
-                      })()}
+                      <div className="flex items-center gap-3">
+                        {selectedTicket.status === 'OPEN' && (
+                          <button
+                            onClick={() => {
+                              setForm({
+                                title: selectedTicket.title,
+                                resource: selectedTicket.resource,
+                                category: selectedTicket.category,
+                                description: selectedTicket.description,
+                                priority: selectedTicket.priority,
+                                contactDetails: selectedTicket.contactDetails || '',
+                              });
+                              setImages([selectedTicket.imageUrl1 || null, selectedTicket.imageUrl2 || null, selectedTicket.imageUrl3 || null]);
+                              setTicketView('edit');
+                            }}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {(() => {
+                          const sc = STATUS_COLORS[selectedTicket.status] || STATUS_COLORS.OPEN
+                          return <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${sc.bg} ${sc.text}`}>{selectedTicket.status.replace('_', ' ')}</span>
+                        })()}
+                      </div>
                     </div>
 
                     <div className="rounded-xl bg-slate-50 p-4">
