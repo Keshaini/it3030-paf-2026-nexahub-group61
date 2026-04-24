@@ -35,12 +35,8 @@ public class ResourceController {
             @RequestParam(required = false) Integer        minCapacity) {
 
         return ResponseEntity.ok(resourceService.search(type, status, location, minCapacity));
-    }
-
-    /**
-     * GET /api/resources/{id}
-     * Public — view a single resource detail.
-     */
+            }
+     
     @GetMapping("/{id}")
     public ResponseEntity<ResourceResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(resourceService.getById(id));
@@ -72,11 +68,7 @@ public class ResourceController {
         return ResponseEntity.ok(resourceService.update(id, request));
     }
 
-    /**
-     * DELETE /api/resources/{id}
-     * ADMIN only — remove a resource.
-     * Returns 204 No Content.
-     */
+    
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {

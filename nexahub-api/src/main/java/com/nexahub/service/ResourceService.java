@@ -21,7 +21,7 @@ public class ResourceService {
 
     private final ResourceRepository resourceRepository;
 
-    // ── GET all with optional filters ──────────────────────────────────────
+
     public List<ResourceResponse> search(ResourceType type,
                                          ResourceStatus status,
                                          String location,
@@ -33,7 +33,6 @@ public class ResourceService {
                 .collect(Collectors.toList());
     }
 
-    // ── GET single ─────────────────────────────────────────────────────────
     public ResourceResponse getById(UUID id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -41,7 +40,6 @@ public class ResourceService {
         return toResponse(resource);
     }
 
-    // ── POST create ────────────────────────────────────────────────────────
     @Transactional
     public ResourceResponse create(ResourceRequest request) {
         Resource resource = Resource.builder()
@@ -59,7 +57,6 @@ public class ResourceService {
         return toResponse(resourceRepository.save(resource));
     }
 
-    // ── PATCH update ───────────────────────────────────────────────────────
     @Transactional
     public ResourceResponse update(UUID id, ResourceRequest request) {
         Resource resource = resourceRepository.findById(id)
@@ -78,7 +75,6 @@ public class ResourceService {
         return toResponse(resourceRepository.save(resource));
     }
 
-    // ── DELETE ─────────────────────────────────────────────────────────────
     @Transactional
     public void delete(UUID id) {
         if (!resourceRepository.existsById(id)) {

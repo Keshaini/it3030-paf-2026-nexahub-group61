@@ -13,27 +13,16 @@ const TYPE_LABELS = {
 };
 
 export default function ResourcesPage() {
-  const { isAdmin } = useAuth();
+  const isAdmin = false; 
 
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   const [filters, setFilters] = useState({
     type: "",
     location: "",
     minCapacity: "",
     sort: "name",
-  });
-
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-
-  const [form, setForm] = useState({
-    name: "",
-    location: "",
-    capacity: "",
-    type: "LECTURE_HALL",
   });
 
   useEffect(() => {
@@ -58,79 +47,28 @@ export default function ResourcesPage() {
         }
 
         if (filters.sort === "capacity") {
-          sorted.sort((a, b) => (b.capacity || 0) - (a.capacity || 0));
+          sorted.sort((a, b) => b.capacity - a.capacity);
         }
 
         setResources(sorted);
       })
-      .catch(() => setError("Failed to load resources"))
       .finally(() => setLoading(false));
   };
 
   const setFilter = (key) => (e) =>
     setFilters((f) => ({ ...f, [key]: e.target.value }));
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm({
-      name: "",
-      location: "",
-      capacity: "",
-      type: "LECTURE_HALL",
-    });
-    setShowForm(true);
-  };
-
-  const openEdit = (resource) => {
-    setEditing(resource);
-    setForm(resource);
-    setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      if (editing) {
-        await resourcesApi.update(editing.id, form);
-      } else {
-        await resourcesApi.create(form);
-      }
-      setShowForm(false);
-      loadResources();
-    } catch (err) {
-      alert("Error saving resource");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this resource?")) return;
-
-    try {
-      await resourcesApi.delete(id);
-      loadResources();
-    } catch (err) {
-      alert("Delete failed");
-    }
-  };
-
   return (
-    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "32px 20px" }}>
-
+    <div style={container}>
       {/* HEADER */}
-      <div style={{ marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "22px", fontWeight: 600 }}>
-          Resources Catalogue
-        </h1>
-        <p style={{ color: "#6b7280", fontSize: "14px" }}>
-          Search, filter and manage university resources
-        </p>
+      <div style={header}>
+        <div>
+          <h1 style={title}>Explore Resources</h1>
+          <p style={subtitle}>
+            Find labs, lecture halls, and equipment available for booking
+          </p>
+        </div>
       </div>
-
-      {/* ADMIN ACTION */}
-      {isAdmin && (
-        <button onClick={openCreate} style={primaryBtn}>
-          + Add Resource
-        </button>
-      )}
 
       {/* FILTERS */}
       <div style={filterBox}>
@@ -165,170 +103,124 @@ export default function ResourcesPage() {
 
       {/* CONTENT */}
       {loading ? (
-        <div style={center}>Loading...</div>
-      ) : error ? (
-        <div style={errorBox}>{error}</div>
-      ) : resources.length === 0 ? (
-        <div style={center}>No resources found</div>
+        <div style={center}>Loading resources...</div>
       ) : (
         <div style={grid}>
           {resources.map((r) => (
-            <div key={r.id} style={{ position: "relative" }}>
-              <ResourceCard resource={r} />
+            <div key={r.id} style={card}>
+              {/* TYPE BADGE */}
+              <div style={badge}>{TYPE_LABELS[r.type]}</div>
 
-              {isAdmin && (
-                <div style={adminActions}>
-                  <button onClick={() => openEdit(r)} style={smallBtn}>
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    style={dangerBtn}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
+              {/* TITLE */}
+              <h3 style={cardTitle}>{r.name}</h3>
+
+              {/* DETAILS */}
+              <p style={cardText}>📍 {r.location}</p>
+              <p style={cardText}>👥 {r.capacity} seats</p>
+
+              {/* STATUS */}
+              <div style={status}>Available</div>
+
+              {/* ACTION */}
+              <button style={bookBtn}>View & Book</button>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* MODAL */}
-      {showForm && (
-        <div style={modalOverlay}>
-          <div style={modal}>
-            <h3>{editing ? "Edit Resource" : "Add Resource"}</h3>
-
-            <input
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              style={input}
-            />
-
-            <input
-              placeholder="Location"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              style={input}
-            />
-
-            <input
-              type="number"
-              placeholder="Capacity"
-              value={form.capacity}
-              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-              style={input}
-            />
-
-            <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-              style={input}
-            >
-              {TYPES.filter((t) => t).map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-              <button onClick={handleSave} style={primaryBtn}>
-                Save
-              </button>
-              <button onClick={() => setShowForm(false)} style={cancelBtn}>
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 }
 
-/* STYLES */
+/* 🔥 STYLES (MATCH BOOKING UI) */
 
-const input = {
-  padding: "8px",
-  borderRadius: "8px",
-  border: "1px solid #ddd",
+const container = {
+  maxWidth: "1100px",
+  margin: "0 auto",
+  padding: "30px 20px",
 };
 
-const primaryBtn = {
-  padding: "8px 12px",
-  background: "#2563eb",
-  color: "#fff",
-  border: "none",
-  borderRadius: "8px",
-  marginBottom: "12px",
+const header = {
+  marginBottom: "20px",
 };
 
-const cancelBtn = {
-  padding: "8px 12px",
-  background: "#e5e7eb",
-  border: "none",
-  borderRadius: "8px",
+const title = {
+  fontSize: "26px",
+  fontWeight: "700",
+};
+
+const subtitle = {
+  color: "#6b7280",
 };
 
 const filterBox = {
   display: "flex",
   gap: "10px",
-  marginBottom: "15px",
+  marginBottom: "20px",
   flexWrap: "wrap",
+};
+
+const input = {
+  padding: "10px",
+  borderRadius: "10px",
+  border: "1px solid #ddd",
 };
 
 const grid = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-  gap: "12px",
+  gap: "18px",
+};
+
+const card = {
+  background: "#fff",
+  padding: "16px",
+  borderRadius: "16px",
+  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+  transition: "0.2s",
+};
+
+const badge = {
+  background: "#e0f2fe",
+  color: "#0369a1",
+  padding: "4px 10px",
+  borderRadius: "999px",
+  fontSize: "12px",
+  display: "inline-block",
+  marginBottom: "8px",
+};
+
+const cardTitle = {
+  fontSize: "18px",
+  fontWeight: "600",
+};
+
+const cardText = {
+  color: "#6b7280",
+  fontSize: "14px",
+};
+
+const status = {
+  marginTop: "8px",
+  fontSize: "12px",
+  background: "#dcfce7",
+  color: "#166534",
+  padding: "4px 8px",
+  borderRadius: "999px",
+  display: "inline-block",
+};
+
+const bookBtn = {
+  marginTop: "12px",
+  width: "100%",
+  padding: "10px",
+  borderRadius: "10px",
+  background: "linear-gradient(to right, #2563eb, #3b82f6)",
+  color: "#fff",
+  border: "none",
+  fontWeight: "500",
 };
 
 const center = {
   textAlign: "center",
   padding: "40px",
-  color: "#6b7280",
-};
-
-const errorBox = {
-  background: "#fee2e2",
-  padding: "10px",
-  borderRadius: "8px",
-};
-
-const modalOverlay = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.4)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-};
-
-const modal = {
-  background: "#fff",
-  padding: "20px",
-  borderRadius: "12px",
-  width: "320px",
-};
-
-const adminActions = {
-  display: "flex",
-  gap: "6px",
-  marginTop: "6px",
-};
-
-const smallBtn = {
-  fontSize: "12px",
-  padding: "4px 8px",
-};
-
-const dangerBtn = {
-  fontSize: "12px",
-  padding: "4px 8px",
-  background: "#fee2e2",
-  color: "#991b1b",
-  border: "none",
 };
