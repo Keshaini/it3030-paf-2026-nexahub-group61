@@ -19,7 +19,6 @@ body {
 
 /* =========================
    ROOT VARIABLES (THEME)
-   Use these across your app
 ========================= */
 :root {
   --color-primary: #2563eb;
@@ -87,7 +86,7 @@ textarea:focus {
 }
 
 /* =========================
-   SCROLLBAR (OPTIONAL NICE TOUCH)
+   SCROLLBAR
 ========================= */
 ::-webkit-scrollbar {
   width: 8px;
