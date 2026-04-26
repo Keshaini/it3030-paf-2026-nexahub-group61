@@ -1,65 +1,138 @@
-@import "tailwindcss";
-
-.water-button {
-	position: relative;
-	overflow: hidden;
-	isolation: isolate;
-	background: linear-gradient(120deg, #1e3a8a, #2563eb 35%, #0f766e 65%, #1d4ed8);
-	background-size: 220% 220%;
-	animation: waterBaseShift 4.5s ease-in-out infinite;
+/* =========================
+   GLOBAL RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.water-button::before {
-	content: '';
-	position: absolute;
-	inset: -120% -25% auto;
-	height: 220%;
-	background: repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.22) 0 9px, rgba(255, 255, 255, 0) 10px 24px);
-	opacity: 0.55;
-	transform: translateY(32%);
-	animation: waterFlow 3.2s linear infinite;
+/* =========================
+   BASE BODY STYLE
+========================= */
+body {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #f5f7fb;
+  color: #111827;
+  line-height: 1.5;
 }
 
-.water-button::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: linear-gradient(120deg, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0) 75%);
-	transform: translateX(-120%);
-	animation: waterShine 2.8s ease-in-out infinite;
+/* =========================
+   ROOT VARIABLES (THEME)
+   Use these across your app
+========================= */
+:root {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f9fafb;
+
+  --color-border-primary: #e5e7eb;
+  --color-border-secondary: #d1d5db;
+  --color-border-tertiary: #eef2f7;
+
+  --color-success: #0f6e56;
+  --color-danger: #a32d2d;
+  --color-info: #185fa5;
 }
 
-.water-button > * {
-	position: relative;
-	z-index: 1;
+/* =========================
+   LINKS
+========================= */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
-@keyframes waterFlow {
-	0% {
-		transform: translateY(32%) translateX(0) rotate(0deg);
-	}
-	100% {
-		transform: translateY(32%) translateX(-8%) rotate(360deg);
-	}
+a:hover {
+  text-decoration: underline;
 }
 
-@keyframes waterBaseShift {
-	0% {
-		background-position: 0% 50%;
-	}
-	50% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
+/* =========================
+   BUTTON DEFAULTS
+========================= */
+button {
+  font-family: inherit;
+  transition: all 0.2s ease;
 }
 
-@keyframes waterShine {
-	0% {
-		transform: translateX(-120%);
-	}
-	100% {
-		transform: translateX(120%);
-	}
+button:hover {
+  opacity: 0.9;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* =========================
+   INPUTS / SELECTS
+========================= */
+input,
+select,
+textarea {
+  font-family: inherit;
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* =========================
+   SCROLLBAR (OPTIONAL NICE TOUCH)
+========================= */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =========================
+   UTILITY CLASSES
+========================= */
+.text-center {
+  text-align: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.grid {
+  display: grid;
+}
+
+.card {
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* =========================
+   PAGE SPACING DEFAULT
+========================= */
+.page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
 }

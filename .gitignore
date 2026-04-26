@@ -1,0 +1,22 @@
+# Spring Boot build output
+nexahub-api/target/
+*.class
+*.jar
+
+# Credentials — never commit these
+nexahub-api/src/main/resources/application.properties
+nexahub-api/src/main/resources/application-local.properties
+
+# Node
+nexahub-client/node_modules/
+nexahub-client/dist/
+nexahub-client/.vite/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
