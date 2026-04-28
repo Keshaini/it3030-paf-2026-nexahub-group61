@@ -131,11 +131,13 @@ const Dashboard = () => {
           </div>
 
           <nav className="mt-8 space-y-2 text-sm font-semibold text-slate-600">
-            <button className="w-full rounded-xl bg-slate-900 px-4 py-3 text-left text-white">Dashboard</button>
-            <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
+            <button onClick={() => navigate('/dashboard')} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-left text-white">Dashboard</button>
+            <button onClick={() => navigate('/resources')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Resources</button>
+            <button onClick={() => navigate('/tickets')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Tickets</button>
+            <button onClick={() => navigate('/bookings/my')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Requests</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Notifications</button>
-            <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Profile</button>
+            <button onClick={() => navigate('/profile')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Profile</button>
           </nav>
 
           <button onClick={handleLogout} className="mt-10 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
