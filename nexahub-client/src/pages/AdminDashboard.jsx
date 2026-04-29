@@ -1,8 +1,10 @@
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import logo from '../assets/edutrack.png'
 import { getAuthUser } from '../auth/roles.js'
 import { API_BASE_URL } from '../config.js'
+import AdminPanelSidebar from '../components/AdminPanelSidebar.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 
 const adminSections = ['Users', 'Resources', 'Bookings', 'Notifications']
 const USERS_API_URL = `${API_BASE_URL}/api/auth/admin/users`
@@ -25,8 +27,9 @@ const initialAdminNotifications = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const user = getAuthUser()
-  const [activeSection, setActiveSection] = useState('Users')
+  const [activeSection, setActiveSection] = useState(location.state?.section || 'Users')
   const [users, setUsers] = useState([])
   const [isUsersLoading, setIsUsersLoading] = useState(false)
   const [usersStatus, setUsersStatus] = useState('')
@@ -54,6 +57,7 @@ const AdminDashboard = () => {
   const [isNotificationSaving, setIsNotificationSaving] = useState(false)
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const [adminNotifications, setAdminNotifications] = useState(initialAdminNotifications)
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null)
 
   const unreadNotificationCount = adminNotifications.filter((notification) => !notification.read).length
 
@@ -113,6 +117,14 @@ const AdminDashboard = () => {
     }
   }, [activeSection, user?.email])
 
+  useEffect(() => {
+    const requestedSection = location.state?.section
+
+    if (requestedSection && requestedSection !== activeSection && adminSections.includes(requestedSection)) {
+      setActiveSection(requestedSection)
+    }
+  }, [location.state, activeSection])
+
   if (!user) {
     return <Navigate to="/login" replace />
   }
@@ -124,6 +136,10 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('auth_user')
     navigate('/login', { replace: true })
+  }
+
+  const handleOpenBookingReview = () => {
+    navigate('/admin/bookings')
   }
 
   const handleChange = (event) => {
@@ -254,16 +270,20 @@ const AdminDashboard = () => {
     }
   }
 
-  const handleDeleteUser = async (userToDelete) => {
-    const isConfirmed = window.confirm(`Delete user ${userToDelete.email}?`)
-    if (!isConfirmed) {
+  const handleDeleteUser = (userToDelete) => {
+    setCrudStatus('')
+    setDeleteUserTarget(userToDelete)
+  }
+
+  const handleDeleteUserConfirm = async () => {
+    if (!deleteUserTarget) {
       return
     }
 
     setCrudStatus('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/${userToDelete.id}`, {
+      const response = await fetch(`${API_BASE_URL}/${deleteUserTarget.id}`, {
         method: 'DELETE',
       })
 
@@ -279,10 +299,11 @@ const AdminDashboard = () => {
         return
       }
 
-      setCrudStatus(`User deleted: ${userToDelete.email}`)
-      if (editingUserId === userToDelete.id) {
+      setCrudStatus(`User deleted: ${deleteUserTarget.email}`)
+      if (editingUserId === deleteUserTarget.id) {
         handleCancelEdit()
       }
+      setDeleteUserTarget(null)
       fetchUsers()
     } catch {
       setCrudStatus('Cannot connect to server. Please start backend and try again.')
@@ -356,6 +377,13 @@ const AdminDashboard = () => {
           <div className="relative flex items-center gap-2">
             <button
               type="button"
+              onClick={handleOpenBookingReview}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Review bookings
+            </button>
+            <button
+              type="button"
               onClick={() => setIsNotificationPanelOpen((prev) => !prev)}
               className="relative rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
               aria-label="View notifications"
@@ -366,10 +394,6 @@ const AdminDashboard = () => {
                   {unreadNotificationCount}
                 </span>
               ) : null}
-            </button>
-            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">ADMIN</span>
-            <button onClick={handleLogout} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              Logout
             </button>
 
             {isNotificationPanelOpen ? (
@@ -424,28 +448,12 @@ const AdminDashboard = () => {
         </div>
 
         <section className="grid gap-5 lg:grid-cols-[240px_1fr]">
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Navigation</p>
-            <nav className="mt-4 space-y-2">
-              {adminSections.map((section) => {
-                const isActive = activeSection === section
-                return (
-                  <button
-                    key={section}
-                    type="button"
-                    onClick={() => setActiveSection(section)}
-                    className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
-                      isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {section}
-                  </button>
-                )
-              })}
-            </nav>
-          </aside>
+          <AdminPanelSidebar
+            user={user}
+            activeItem={activeSection}
+            onSectionChange={setActiveSection}
+            onLogout={handleLogout}
+          />
 
           <div className="space-y-5">
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -688,11 +696,44 @@ const AdminDashboard = () => {
                   </button>
                 </div>
               ) : null}
+
+              {activeSection === 'Bookings' ? (
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm text-slate-500">
+                    Booking approval, rejection, cancellation, and filtering are handled in the dedicated review console.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenBookingReview}
+                    className="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white"
+                  >
+                    Open booking review console
+                  </button>
+                </div>
+              ) : null}
             </section>
 
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteUserTarget)}
+        title="Delete user account"
+        description="Use delete only for accounts that should be removed completely. This action affects access across the system."
+        confirmLabel="Delete user"
+        confirmTone="danger"
+        onClose={() => setDeleteUserTarget(null)}
+        onConfirm={handleDeleteUserConfirm}
+      >
+        {deleteUserTarget ? (
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-900">{deleteUserTarget.fullName || 'Unnamed user'}</p>
+            <p>{deleteUserTarget.email}</p>
+            <p>{deleteUserTarget.role}</p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   )
 }
