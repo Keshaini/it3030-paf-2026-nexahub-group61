@@ -134,7 +134,7 @@ const Dashboard = () => {
             <button onClick={() => navigate('/dashboard')} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-left text-white">Dashboard</button>
             <button onClick={() => navigate('/resources')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Resources</button>
             <button onClick={() => navigate('/tickets')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Tickets</button>
-            <button onClick={() => navigate('/bookings/my')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
+            <button onClick={() => navigate('/bookings')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Bookings</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">My Requests</button>
             <button className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Notifications</button>
             <button onClick={() => navigate('/profile')} className="w-full rounded-xl px-4 py-3 text-left hover:bg-slate-100">Profile</button>

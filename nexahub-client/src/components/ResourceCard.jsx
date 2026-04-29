@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 
-const TYPE_COLORS = {
-  LECTURE_HALL: { bg: "#E8F2FF", text: "#1D4ED8" },
-  LAB: { bg: "#E6F9F1", text: "#047857" },
-  MEETING_ROOM: { bg: "#F3F0FF", text: "#6D28D9" },
-  EQUIPMENT: { bg: "#FFF4E5", text: "#B45309" },
+const TYPE_STYLES = {
+  LECTURE_HALL: "bg-blue-100 text-blue-700",
+  LAB: "bg-emerald-100 text-emerald-700",
+  MEETING_ROOM: "bg-violet-100 text-violet-700",
+  EQUIPMENT: "bg-amber-100 text-amber-700",
 };
 
 const TYPE_LABELS = {
@@ -14,135 +14,87 @@ const TYPE_LABELS = {
   EQUIPMENT: "Equipment",
 };
 
-export default function ResourceCard({ resource }) {
-  const color = TYPE_COLORS[resource.type] || TYPE_COLORS.EQUIPMENT;
+export default function ResourceCard({ resource, onBook }) {
+  const typeStyle = TYPE_STYLES[resource.type] || TYPE_STYLES.EQUIPMENT;
+
+  const isAvailable = resource.status === "ACTIVE";
 
   return (
-    <Link
-      to={`/resources/${resource.id}`}
-      style={{ textDecoration: "none" }}
-    >
-      <div
-        style={card}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-6px)";
-          e.currentTarget.style.boxShadow =
-            "0 14px 32px rgba(0,0,0,0.08)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow =
-            "0 6px 18px rgba(0,0,0,0.05)";
-        }}
-      >
-        {/* TOP ROW */}
-        <div style={topRow}>
-          {/* TYPE BADGE */}
-          <span
-            style={{
-              ...badge,
-              background: color.bg,
-              color: color.text,
-            }}
-          >
-            {TYPE_LABELS[resource.type]}
-          </span>
+    <div className="group rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-1">
 
-          {/* STATUS BADGE */}
-          <span
-            style={{
-              ...badge,
-              background:
-                resource.status === "ACTIVE" ? "#DCFCE7" : "#FEE2E2",
-              color:
-                resource.status === "ACTIVE" ? "#166534" : "#991B1B",
-            }}
-          >
-            {resource.status === "ACTIVE"
-              ? "Available"
-              : "Unavailable"}
-          </span>
-        </div>
+      {/* 🔹 TOP ROW */}
+      <div className="flex justify-between items-start gap-2">
 
-        {/* TITLE */}
-        <div style={title}>{resource.name}</div>
+        {/* TYPE */}
+        <span className={`text-xs font-bold px-3 py-1 rounded-full ${typeStyle}`}>
+          {TYPE_LABELS[resource.type]}
+        </span>
 
-        {/* LOCATION */}
-        <div style={location}>📍 {resource.location}</div>
-
-        {/* DETAILS */}
-        <div style={details}>
-          <span>
-            👥 {resource.capacity ? `${resource.capacity} seats` : "N/A"}
-          </span>
-
-          <span>
-            🕒{" "}
-            {resource.availabilityStart
-              ? `${resource.availabilityStart} - ${resource.availabilityEnd}`
-              : "Flexible"}
-          </span>
-        </div>
-
-        {/* CTA HINT (NEW 🔥) */}
-        <div style={cta}>
-          View details & book →
-        </div>
+        {/* STATUS */}
+        <span
+          className={`text-xs font-bold px-3 py-1 rounded-full ${
+            isAvailable
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-rose-100 text-rose-700"
+          }`}
+        >
+          {isAvailable ? "Available" : "Unavailable"}
+        </span>
       </div>
-    </Link>
+
+      {/* 🔹 TITLE */}
+      <h3 className="mt-3 text-lg font-black text-slate-900">
+        {resource.name}
+      </h3>
+
+      {/* 🔹 LOCATION */}
+      <p className="text-sm text-slate-500 mt-1">
+        📍 {resource.location}
+      </p>
+
+      {/* 🔹 DETAILS */}
+      <div className="flex justify-between text-xs text-slate-500 mt-4 pt-3 border-t border-dashed">
+        <span>
+          👥 {resource.capacity ? `${resource.capacity} seats` : "N/A"}
+        </span>
+
+        <span>
+          🕒{" "}
+          {resource.availabilityStart
+            ? `${resource.availabilityStart} - ${resource.availabilityEnd}`
+            : "Flexible"}
+        </span>
+      </div>
+
+      {/* 🔹 ACTIONS */}
+      <div className="mt-4 flex gap-2">
+
+        {/* VIEW DETAILS */}
+        <Link
+          to={`/resource/${resource.id}`}
+          className="w-1/2 text-center rounded-xl border border-slate-300 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+        >
+          View
+        </Link>
+
+        {/* BOOK BUTTON */}
+        <button
+          onClick={onBook}
+          disabled={!isAvailable}
+          className={`w-1/2 rounded-xl py-2 text-sm font-bold text-white transition ${
+            isAvailable
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-slate-300 cursor-not-allowed"
+          }`}
+        >
+          Book
+        </button>
+      </div>
+
+      {/* 🔹 HINT TEXT */}
+      <p className="mt-3 text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition">
+        Quick booking available →
+      </p>
+    </div>
   );
 }
-
-/* 🔥 STYLES */
-
-const card = {
-  background: "#fff",
-  border: "1px solid #f1f5f9",
-  borderRadius: "16px",
-  padding: "18px",
-  transition: "all 0.25s ease",
-  cursor: "pointer",
-  boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "10px",
-};
-
-const topRow = {
-  display: "flex",
-  justifyContent: "space-between",
-};
-
-const badge = {
-  fontSize: "11px",
-  fontWeight: 600,
-  padding: "4px 10px",
-  borderRadius: "999px",
-};
-
-const title = {
-  fontSize: "16px",
-  fontWeight: 600,
-  color: "#111827",
-};
-
-const location = {
-  fontSize: "13px",
-  color: "#6b7280",
-};
-
-const details = {
-  display: "flex",
-  justifyContent: "space-between",
-  fontSize: "12px",
-  color: "#6b7280",
-  paddingTop: "10px",
-  borderTop: "1px dashed #e5e7eb",
-};
-
-const cta = {
-  marginTop: "6px",
-  fontSize: "13px",
-  fontWeight: 500,
-  color: "#2563eb",
-};

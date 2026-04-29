@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { resourcesApi } from "../api/resourcesApi";
 import ResourceCard from "../components/ResourceCard";
+import UserPortalSidebar from "../components/UserPortalSidebar.jsx";
+import { getAuthUser } from "../auth/roles.js";
 
 const TYPES = ["", "LECTURE_HALL", "LAB", "MEETING_ROOM", "EQUIPMENT"];
 
@@ -13,7 +16,8 @@ const TYPE_LABELS = {
 };
 
 export default function ResourcesPage() {
-  const isAdmin = false; 
+  const navigate = useNavigate();
+  const user = getAuthUser();
 
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,169 +62,122 @@ export default function ResourcesPage() {
   const setFilter = (key) => (e) =>
     setFilters((f) => ({ ...f, [key]: e.target.value }));
 
+  const handleBook = (resourceId) => {
+    navigate(`/dashboard?resourceId=${resourceId}`);
+  };
+
+  /* 📊 Stats */
+  const total = resources.length;
+  const highCapacity = resources.filter((r) => r.capacity >= 50).length;
+  const labs = resources.filter((r) => r.type === "LAB").length;
+
   return (
-    <div style={container}>
-      {/* HEADER */}
-      <div style={header}>
-        <div>
-          <h1 style={title}>Explore Resources</h1>
-          <p style={subtitle}>
-            Find labs, lecture halls, and equipment available for booking
-          </p>
-        </div>
-      </div>
+    <div className="h-screen w-screen overflow-hidden bg-[#f5efe8] p-2 sm:p-3 lg:p-4">
+      <div className="grid h-full w-full gap-3 rounded-[2rem] bg-slate-50 p-3 shadow-2xl lg:grid-cols-[260px_minmax(0,1fr)] lg:p-4">
 
-      {/* FILTERS */}
-      <div style={filterBox}>
-        <select value={filters.type} onChange={setFilter("type")} style={input}>
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
+        {/* 🔹 SIDEBAR */}
+        <UserPortalSidebar user={user} activeItem="resources" />
 
-        <input
-          placeholder="Location"
-          value={filters.location}
-          onChange={setFilter("location")}
-          style={input}
-        />
+        {/* 🔹 MAIN CONTENT */}
+        <main className="overflow-auto rounded-[1.5rem] bg-white p-4 sm:p-6">
+          <div className="rounded-[2rem] border border-white/60 bg-[linear-gradient(180deg,#f6efe7_0%,#eef5ff_100%)] p-4 shadow-2xl sm:p-6">
 
-        <input
-          type="number"
-          placeholder="Min capacity"
-          value={filters.minCapacity}
-          onChange={setFilter("minCapacity")}
-          style={input}
-        />
-
-        <select value={filters.sort} onChange={setFilter("sort")} style={input}>
-          <option value="name">Sort: Name</option>
-          <option value="capacity">Sort: Capacity</option>
-        </select>
-      </div>
-
-      {/* CONTENT */}
-      {loading ? (
-        <div style={center}>Loading resources...</div>
-      ) : (
-        <div style={grid}>
-          {resources.map((r) => (
-            <div key={r.id} style={card}>
-              {/* TYPE BADGE */}
-              <div style={badge}>{TYPE_LABELS[r.type]}</div>
-
-              {/* TITLE */}
-              <h3 style={cardTitle}>{r.name}</h3>
-
-              {/* DETAILS */}
-              <p style={cardText}>📍 {r.location}</p>
-              <p style={cardText}>👥 {r.capacity} seats</p>
-
-              {/* STATUS */}
-              <div style={status}>Available</div>
-
-              {/* ACTION */}
-              <button style={bookBtn}>View & Book</button>
+            {/* 🔹 HEADER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-5">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Resource Catalogue
+                </p>
+                <h1 className="text-3xl font-black text-slate-900">
+                  Explore Resources
+                </h1>
+                <p className="text-sm text-slate-600 mt-1">
+                  Browse and book lecture halls, labs, and equipment
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* 🔹 STATS CARDS */}
+            <section className="mt-6 grid gap-4 md:grid-cols-3">
+              <StatCard label="Total Resources" value={total} />
+              <StatCard label="High Capacity (50+)" value={highCapacity} />
+              <StatCard label="Labs Available" value={labs} />
+            </section>
+
+            {/* 🔹 FILTERS */}
+            <section className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                <select
+                  value={filters.type}
+                  onChange={setFilter("type")}
+                  className="rounded-xl border px-4 py-2"
+                >
+                  {TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  placeholder="Location"
+                  value={filters.location}
+                  onChange={setFilter("location")}
+                  className="rounded-xl border px-4 py-2"
+                />
+
+                <input
+                  type="number"
+                  placeholder="Min capacity"
+                  value={filters.minCapacity}
+                  onChange={setFilter("minCapacity")}
+                  className="rounded-xl border px-4 py-2"
+                />
+
+                <select
+                  value={filters.sort}
+                  onChange={setFilter("sort")}
+                  className="rounded-xl border px-4 py-2"
+                >
+                  <option value="name">Sort by Name</option>
+                  <option value="capacity">Sort by Capacity</option>
+                </select>
+
+              </div>
+            </section>
+
+            {/* 🔹 CONTENT */}
+            {loading ? (
+              <div className="mt-10 text-center text-slate-500">
+                Loading resources...
+              </div>
+            ) : resources.length === 0 ? (
+              <div className="mt-10 text-center text-slate-500">
+                No resources found
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {resources.map((r) => (
+                  <ResourceCard
+                    key={r.id}
+                    resource={r}
+                    onBook={() => handleBook(r.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
 
-/* 🔥 STYLES (MATCH BOOKING UI) */
-
-const container = {
-  maxWidth: "1100px",
-  margin: "0 auto",
-  padding: "30px 20px",
-};
-
-const header = {
-  marginBottom: "20px",
-};
-
-const title = {
-  fontSize: "26px",
-  fontWeight: "700",
-};
-
-const subtitle = {
-  color: "#6b7280",
-};
-
-const filterBox = {
-  display: "flex",
-  gap: "10px",
-  marginBottom: "20px",
-  flexWrap: "wrap",
-};
-
-const input = {
-  padding: "10px",
-  borderRadius: "10px",
-  border: "1px solid #ddd",
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-  gap: "18px",
-};
-
-const card = {
-  background: "#fff",
-  padding: "16px",
-  borderRadius: "16px",
-  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-  transition: "0.2s",
-};
-
-const badge = {
-  background: "#e0f2fe",
-  color: "#0369a1",
-  padding: "4px 10px",
-  borderRadius: "999px",
-  fontSize: "12px",
-  display: "inline-block",
-  marginBottom: "8px",
-};
-
-const cardTitle = {
-  fontSize: "18px",
-  fontWeight: "600",
-};
-
-const cardText = {
-  color: "#6b7280",
-  fontSize: "14px",
-};
-
-const status = {
-  marginTop: "8px",
-  fontSize: "12px",
-  background: "#dcfce7",
-  color: "#166534",
-  padding: "4px 8px",
-  borderRadius: "999px",
-  display: "inline-block",
-};
-
-const bookBtn = {
-  marginTop: "12px",
-  width: "100%",
-  padding: "10px",
-  borderRadius: "10px",
-  background: "linear-gradient(to right, #2563eb, #3b82f6)",
-  color: "#fff",
-  border: "none",
-  fontWeight: "500",
-};
-
-const center = {
-  textAlign: "center",
-  padding: "40px",
-};
+/* 🔹 STAT CARD COMPONENT */
+const StatCard = ({ label, value }) => (
+  <div className="rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 p-5">
+    <p className="text-xs uppercase text-slate-500">{label}</p>
+    <p className="text-3xl font-black text-slate-900 mt-2">{value}</p>
+  </div>
+);
