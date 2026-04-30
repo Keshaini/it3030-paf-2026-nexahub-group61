@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // Auth + dashboards
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminBookingReviewPage from './pages/AdminBookingReviewPage.jsx';
+import AdminTicketsPage from './pages/AdminTicketsPage.jsx'
 import BookingPage from './pages/BookingPage.jsx';
 import Dashboard from "./pages/Dashboard.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
@@ -11,6 +12,7 @@ import Login from "./pages/Login.jsx";
 import ManagerDashboard from "./pages/ManagerDashboard.jsx";
 import SignUp from "./pages/SignUp.jsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.jsx";
+import TicketsPage from './pages/TicketsPage.jsx'
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { ROLES } from "./auth/roles.js";
 
@@ -44,6 +46,15 @@ function App() {
           element={
             <ProtectedRoute minRole={ROLES.USER}>
               <BookingPage />
+            </ProtectedRoute>
+          }
+        />
+
+         <Route
+          path="/tickets"
+          element={
+            <ProtectedRoute minRole={ROLES.USER}>
+              <TicketsPage />
             </ProtectedRoute>
           }
         />
@@ -83,6 +94,15 @@ function App() {
           element={
             <ProtectedRoute minRole={ROLES.ADMIN}>
               <AdminBookingReviewPage />
+            </ProtectedRoute>
+          }
+        />
+
+         <Route
+          path="/admin/tickets"
+          element={
+            <ProtectedRoute minRole={ROLES.MANAGER}>
+              <AdminTicketsPage />
             </ProtectedRoute>
           }
         />
