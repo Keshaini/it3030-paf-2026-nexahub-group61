@@ -9,9 +9,11 @@ import com.edutrack.backend.booking.dto.BookingResponse;
 import com.edutrack.backend.booking.dto.CreateBookingRequest;
 import com.edutrack.backend.booking.dto.UpdateBookingRequest;
 import com.edutrack.backend.booking.entity.Booking;
-import com.edutrack.backend.booking.entity.Resource;
 import com.edutrack.backend.booking.exception.BookingException;
 import com.edutrack.backend.booking.repository.BookingRepository;
+import com.nexahub.model.Resource;
+import com.nexahub.service.ResourceService;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class BookingService {
@@ -247,7 +250,7 @@ public class BookingService {
         booking.setExpectedAttendees(expectedAttendees);
     }
 
-    private void ensureNoConflict(Long resourceId, LocalDate bookingDate, java.time.LocalTime startTime, java.time.LocalTime endTime, Long excludedBookingId) {
+    private void ensureNoConflict(UUID resourceId, LocalDate bookingDate, java.time.LocalTime startTime, java.time.LocalTime endTime, Long excludedBookingId) {
         boolean hasConflict = !bookingRepository.findConflicts(
                 resourceId,
                 bookingDate,

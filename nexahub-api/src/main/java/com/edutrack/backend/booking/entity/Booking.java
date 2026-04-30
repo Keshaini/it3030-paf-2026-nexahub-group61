@@ -2,6 +2,8 @@ package com.edutrack.backend.booking.entity;
 
 import com.edutrack.backend.auth.entity.UserAccount;
 import com.edutrack.backend.booking.config.BookingStatus;
+import com.nexahub.model.Resource;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,6 +30,7 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "resource_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "resource_id", nullable = false)
     private Resource resource;
@@ -78,14 +81,6 @@ public class Booking {
 
     public Long getId() {
         return id;
-    }
-
-    public Resource getResource() {
-        return resource;
-    }
-
-    public void setResource(Resource resource) {
-        this.resource = resource;
     }
 
     public UserAccount getRequestedBy() {

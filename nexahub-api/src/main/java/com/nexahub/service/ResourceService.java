@@ -7,6 +7,7 @@ import com.nexahub.model.enums.ResourceStatus;
 import com.nexahub.model.enums.ResourceType;
 import com.nexahub.repository.ResourceRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,11 @@ public class ResourceService {
                     "Resource not found with id: " + id));
         return toResponse(resource);
     }
+
+    public Resource requireActiveResource(UUID resourceId) {
+        return resourceRepository.findById(resourceId)
+            .orElseThrow(() -> new RuntimeException("Resource not found"));
+    }  
 
     @Transactional
     public ResourceResponse create(ResourceRequest request) {
