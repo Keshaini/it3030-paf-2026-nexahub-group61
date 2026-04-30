@@ -1,0 +1,260 @@
+{
+	"info": {
+		"_postman_id": "f8a7e3d1-b6c2-49f8-b1a9-3d8c1e7f9a2b",
+		"name": "NexaHub - Tickets Management",
+		"description": "API endpoints for managing Tickets (Create, Read, Update, Delete) in the NexaHub Smart Campus system.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Create Ticket",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Wifi issue in Hall A3\",\n    \"resource\": \"Hall A3\",\n    \"category\": \"IT_EQUIPMENT\",\n    \"priority\": \"HIGH\",\n    \"description\": \"The wifi router keeps disconnecting randomly.\",\n    \"contactDetails\": \"0712345678\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/tickets",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Get All Tickets",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Get My Tickets",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/mine",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"mine"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Get Single Ticket by ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. Update Ticket Details",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Wifi issue in Hall A3 - Urgent\",\n    \"resource\": \"Hall A3\",\n    \"category\": \"IT_EQUIPMENT\",\n    \"priority\": \"URGENT\",\n    \"description\": \"The wifi router keeps disconnecting randomly. Please send someone.\",\n    \"contactDetails\": \"0712345678\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6. Update Ticket Status (Admin/Tech)",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "ADMIN",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"status\": \"IN_PROGRESS\",\n    \"assignedToEmail\": \"technician@gmail.com\",\n    \"resolutionNotes\": \"\",\n    \"rejectionReason\": \"\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1/status",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "7. Delete Ticket",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

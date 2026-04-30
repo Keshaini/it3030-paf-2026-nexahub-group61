@@ -1,0 +1,171 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-1234-56789abcdef0",
+		"name": "NexaHub - Ticket Comments",
+		"description": "API endpoints for managing Ticket Comments in the NexaHub Smart Campus system.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Add a Comment to a Ticket",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"description": "Email of the logged-in user",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"description": "Role (USER, TECHNICIAN, ADMIN, MANAGER)",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"content\": \"This is a test comment from Postman! Please look into the issue.\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1/comments",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1",
+						"comments"
+					],
+					"variable": [
+						{
+							"key": "ticketId",
+							"value": "1",
+							"description": "ID of the ticket"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Get All Comments for a Ticket",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/1/comments",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"1",
+						"comments"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Update a Comment",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"content\": \"I am updating this comment to add more details about the issue.\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/comments/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"comments",
+						"1"
+					]
+				},
+				"description": "Replace `1` at the end of the URL with the ID of the COMMENT you want to update."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Delete a Comment",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-User-Email",
+						"value": "janoshan2001@gmail.com",
+						"type": "text"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "USER",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8081/api/tickets/comments/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"tickets",
+						"comments",
+						"1"
+					]
+				},
+				"description": "Replace `1` at the end of the URL with the ID of the COMMENT you want to delete."
+			},
+			"response": []
+		}
+	]
+}
