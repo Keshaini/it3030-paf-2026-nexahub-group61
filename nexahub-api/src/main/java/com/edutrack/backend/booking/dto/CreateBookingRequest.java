@@ -9,10 +9,11 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 public record CreateBookingRequest(
         @NotNull(message = "Resource is required")
-        Long resourceId,
+        UUID resourceId,
 
         @NotBlank(message = "Requester email is required")
         @Email(message = "Requester email must be valid")

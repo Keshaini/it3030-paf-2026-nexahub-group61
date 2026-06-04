@@ -11,6 +11,8 @@ import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
@@ -68,11 +70,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         order by b.startTime asc
         """)
     List<Booking> findConflicts(
-            @Param("resourceId") Long resourceId,
+            @Param("resourceId") UUID resourceId,
             @Param("bookingDate") LocalDate bookingDate,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime,
             @Param("statuses") Collection<BookingStatus> statuses,
             @Param("excludedBookingId") Long excludedBookingId
     );
+
+    Set<BookingStatus> findConflicts(UUID resourceId, LocalDate bookingDate, LocalTime startTime, LocalTime endTime,
+            Set<BookingStatus> activeStatuses, Long excludedBookingId);
 }

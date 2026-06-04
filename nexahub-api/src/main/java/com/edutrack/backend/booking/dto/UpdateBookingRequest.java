@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 public record UpdateBookingRequest(
         @NotBlank(message = "Requester email is required")
@@ -16,7 +17,7 @@ public record UpdateBookingRequest(
         String requesterEmail,
 
         @NotNull(message = "Resource is required")
-        Long resourceId,
+        UUID resourceId,
 
         @NotNull(message = "Booking date is required")
         @FutureOrPresent(message = "Booking date cannot be in the past")
