@@ -30,7 +30,6 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "resource_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "resource_id", nullable = false)
     private Resource resource;
@@ -79,8 +78,18 @@ public class Booking {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    // ── Getters and Setters ────────────────────────────────────────────────
+
     public Long getId() {
         return id;
+    }
+
+    public Resource getResource() {
+        return resource;
+    }
+
+    public void setResource(Resource resource) {
+        this.resource = resource;
     }
 
     public UserAccount getRequestedBy() {
@@ -186,6 +195,8 @@ public class Booking {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    // ── Lifecycle callbacks ────────────────────────────────────────────────
 
     @PrePersist
     void onCreate() {

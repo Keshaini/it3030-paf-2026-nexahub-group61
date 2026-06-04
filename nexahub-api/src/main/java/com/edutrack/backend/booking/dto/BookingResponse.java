@@ -2,14 +2,16 @@ package com.edutrack.backend.booking.dto;
 
 import com.edutrack.backend.auth.entity.UserAccount;
 import com.edutrack.backend.booking.entity.Booking;
+import com.nexahub.model.Resource;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.UUID;
 
 public record BookingResponse(
         Long id,
-        Long resourceId,
+        UUID resourceId,
         String resourceCode,
         String resourceName,
         String resourceCategory,
@@ -36,15 +38,16 @@ public record BookingResponse(
 
     public static BookingResponse fromEntity(Booking booking) {
         UserAccount reviewer = booking.getReviewedBy();
+        Resource resource    = booking.getResource();
 
         return new BookingResponse(
                 booking.getId(),
-                booking.getResource().getId(),
-                booking.getResource().getCode(),
-                booking.getResource().getName(),
-                booking.getResource().getCategory(),
-                booking.getResource().getLocation(),
-                booking.getResource().getCapacity(),
+                resource != null ? resource.getId()              : null,
+                resource != null ? resource.getId().toString()   : null,
+                resource != null ? resource.getName()            : null,
+                resource != null ? resource.getType().name()     : null,
+                resource != null ? resource.getLocation()        : null,
+                resource != null ? resource.getCapacity()        : null,
                 booking.getBookingDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),
@@ -54,7 +57,7 @@ public record BookingResponse(
                 booking.getRequestedBy().getEmail(),
                 booking.getRequestedBy().getFullName(),
                 booking.getRequestedBy().getItNumber(),
-                reviewer != null ? reviewer.getEmail() : null,
+                reviewer != null ? reviewer.getEmail()    : null,
                 reviewer != null ? reviewer.getFullName() : null,
                 booking.getRejectionReason(),
                 booking.getCancellationReason(),

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { resourcesApi } from "../api/resourcesApi";
 import ResourceCard from "../components/ResourceCard";
 import UserPortalSidebar from "../components/UserPortalSidebar.jsx";
+import ResourceForm from "../components/ResourceForm";
 import { getAuthUser } from "../auth/roles.js";
 
 const TYPES = ["", "LECTURE_HALL", "LAB", "MEETING_ROOM", "EQUIPMENT"];
@@ -22,6 +23,13 @@ export default function ResourcesPage() {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  /* ================= CRUD STATES ================= */
+  const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+
+  /* ================= FILTERS ================= */
   const [filters, setFilters] = useState({
     type: "",
     location: "",
@@ -66,45 +74,98 @@ export default function ResourcesPage() {
     navigate(`/dashboard?resourceId=${resourceId}`);
   };
 
-  /* 📊 Stats */
+  /* ================= CREATE / UPDATE ================= */
+
+  const handleSubmit = async (data) => {
+    setSaving(true);
+
+    try {
+      if (editTarget) {
+        await resourcesApi.update(editTarget.id, data);
+      } else {
+        await resourcesApi.create(data);
+      }
+
+      setShowForm(false);
+      setEditTarget(null);
+      loadResources();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ================= DELETE ================= */
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this resource?"))
+      return;
+
+    setDeleteId(id);
+
+    try {
+      await resourcesApi.delete(id);
+      setResources((prev) => prev.filter((r) => r.id !== id));
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  /* ================= STATS ================= */
+
   const total = resources.length;
   const highCapacity = resources.filter((r) => r.capacity >= 50).length;
   const labs = resources.filter((r) => r.type === "LAB").length;
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#f5efe8] p-2 sm:p-3 lg:p-4">
+
       <div className="grid h-full w-full gap-3 rounded-[2rem] bg-slate-50 p-3 shadow-2xl lg:grid-cols-[260px_minmax(0,1fr)] lg:p-4">
 
-        {/* 🔹 SIDEBAR */}
+        {/* ================= SIDEBAR ================= */}
         <UserPortalSidebar user={user} activeItem="resources" />
 
-        {/* 🔹 MAIN CONTENT */}
+        {/* ================= MAIN ================= */}
         <main className="overflow-auto rounded-[1.5rem] bg-white p-4 sm:p-6">
-          <div className="rounded-[2rem] border border-white/60 bg-[linear-gradient(180deg,#f6efe7_0%,#eef5ff_100%)] p-4 shadow-2xl sm:p-6">
 
-            {/* 🔹 HEADER */}
+          <div className="rounded-[2rem] border border-white/60 bg-gradient-to-b from-[#f6efe7] to-[#eef5ff] p-4 shadow-2xl sm:p-6">
+
+            {/* ================= HEADER ================= */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-5">
+
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                   Resource Catalogue
                 </p>
+
                 <h1 className="text-3xl font-black text-slate-900">
                   Explore Resources
                 </h1>
+
                 <p className="text-sm text-slate-600 mt-1">
-                  Browse and book lecture halls, labs, and equipment
+                  Manage, book and maintain university resources
                 </p>
               </div>
+
+              {/* ➕ ADD BUTTON */}
+              <button
+                onClick={() => {
+                  setEditTarget(null);
+                  setShowForm(true);
+                }}
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700"
+              >
+                + Add Resource
+              </button>
             </div>
 
-            {/* 🔹 STATS CARDS */}
+            {/* ================= STATS ================= */}
             <section className="mt-6 grid gap-4 md:grid-cols-3">
               <StatCard label="Total Resources" value={total} />
               <StatCard label="High Capacity (50+)" value={highCapacity} />
               <StatCard label="Labs Available" value={labs} />
             </section>
 
-            {/* 🔹 FILTERS */}
+            {/* ================= FILTERS ================= */}
             <section className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
@@ -147,7 +208,65 @@ export default function ResourcesPage() {
               </div>
             </section>
 
-            {/* 🔹 CONTENT */}
+            {/* ================= MODAL FORM (FIXED CRUD UI) ================= */}
+            {showForm && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+                <div className="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative">
+
+                  {/* CLOSE */}
+                  <button
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditTarget(null);
+                    }}
+                    className="absolute top-3 right-4 text-gray-500 hover:text-black"
+                  >
+                    ✕
+                  </button>
+
+                  {/* TITLE */}
+                  <h2 className="text-xl font-bold mb-4">
+                    {editTarget ? "Edit Resource" : "Add Resource"}
+                  </h2>
+
+                  {/* FORM */}
+                  <ResourceForm
+                    initial={editTarget || {}}
+                    onSubmit={handleSubmit}
+                    loading={saving}
+                  />
+
+                  {/* 🔥 EXPLICIT ACTION BUTTONS (IMPORTANT FOR SCREENSHOTS) */}
+                  <div className="flex justify-end gap-3 mt-4">
+
+                    <button
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditTarget(null);
+                      }}
+                      className="px-4 py-2 rounded-xl border"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        document.querySelector("form")?.requestSubmit()
+                      }
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl"
+                    >
+                      {editTarget ? "Update Resource" : "Add Resource"}
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= CONTENT ================= */}
             {loading ? (
               <div className="mt-10 text-center text-slate-500">
                 Loading resources...
@@ -158,15 +277,43 @@ export default function ResourcesPage() {
               </div>
             ) : (
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
                 {resources.map((r) => (
-                  <ResourceCard
-                    key={r.id}
-                    resource={r}
-                    onBook={() => handleBook(r.id)}
-                  />
+                  <div key={r.id}>
+
+                    <ResourceCard
+                      resource={r}
+                      onBook={() => handleBook(r.id)}
+                    />
+
+                    {/* ADMIN ACTIONS */}
+                    <div className="flex gap-2 mt-2">
+
+                      <button
+                        onClick={() => {
+                          setEditTarget(r);
+                          setShowForm(true);
+                        }}
+                        className="px-2 py-1 text-xs bg-yellow-400 rounded"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded"
+                      >
+                        {deleteId === r.id ? "..." : "Delete"}
+                      </button>
+
+                    </div>
+
+                  </div>
                 ))}
+
               </div>
             )}
+
           </div>
         </main>
       </div>
@@ -174,7 +321,7 @@ export default function ResourcesPage() {
   );
 }
 
-/* 🔹 STAT CARD COMPONENT */
+/* ================= STAT CARD ================= */
 const StatCard = ({ label, value }) => (
   <div className="rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 p-5">
     <p className="text-xs uppercase text-slate-500">{label}</p>

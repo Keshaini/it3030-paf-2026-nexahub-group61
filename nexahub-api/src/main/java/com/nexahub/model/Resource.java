@@ -29,21 +29,19 @@ public class Resource {
     @Column(nullable = false)
     private String location;
 
-    // Capacity is nullable for equipment like projectors
     private Integer capacity;
 
     @Column(name = "availability_start")
-    private String availabilityStart; // e.g. "08:00"
+    private String availabilityStart;
 
     @Column(name = "availability_end")
-    private String availabilityEnd;   // e.g. "18:00"
+    private String availabilityEnd;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private ResourceStatus status = ResourceStatus.ACTIVE;
 
-    // Optional extra info — e.g. "Has projector, AC, 40 seats"
     private String description;
 
     @CreationTimestamp

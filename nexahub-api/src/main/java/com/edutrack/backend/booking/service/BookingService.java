@@ -12,7 +12,7 @@ import com.edutrack.backend.booking.entity.Booking;
 import com.edutrack.backend.booking.exception.BookingException;
 import com.edutrack.backend.booking.repository.BookingRepository;
 import com.nexahub.model.Resource;
-import com.nexahub.service.ResourceService;
+import com.nexahub.repository.ResourceRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,42 +28,49 @@ import java.util.UUID;
 @Service
 public class BookingService {
 
-    private static final Set<BookingStatus> ACTIVE_STATUSES = EnumSet.of(BookingStatus.PENDING, BookingStatus.APPROVED);
+    private static final Set<BookingStatus> ACTIVE_STATUSES =
+            EnumSet.of(BookingStatus.PENDING, BookingStatus.APPROVED);
 
-    private final BookingRepository bookingRepository;
+    private final BookingRepository     bookingRepository;
     private final UserAccountRepository userAccountRepository;
-    private final ResourceService resourceService;
+    private final ResourceRepository    resourceRepository;
 
     public BookingService(
             BookingRepository bookingRepository,
             UserAccountRepository userAccountRepository,
-            ResourceService resourceService
+            ResourceRepository resourceRepository
     ) {
-        this.bookingRepository = bookingRepository;
+        this.bookingRepository     = bookingRepository;
         this.userAccountRepository = userAccountRepository;
-        this.resourceService = resourceService;
+        this.resourceRepository    = resourceRepository;
+    }
+
+    // ── Helper: get active Resource by UUID ───────────────────────────────
+    private Resource requireActiveResource(UUID resourceId) {
+        Resource resource = resourceRepository.findById(resourceId)
+                .orElseThrow(() -> new BookingException("Resource not found"));
+        if (resource.getStatus() == null ||
+                !"ACTIVE".equals(resource.getStatus().name())) {
+            throw new BookingException("Resource is not active");
+        }
+        return resource;
     }
 
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request) {
         UserAccount requester = requireUser(request.requesterEmail());
-        Resource resource = resourceService.requireActiveResource(request.resourceId());
+        Resource resource     = requireActiveResource(request.resourceId());
 
         validateTimeWindow(request.startTime(), request.endTime());
         validateCapacity(resource, request.expectedAttendees());
-        ensureNoConflict(resource.getId(), request.bookingDate(), request.startTime(), request.endTime(), null);
+        ensureNoConflict(resource.getId(), request.bookingDate(),
+                request.startTime(), request.endTime(), null);
 
         Booking booking = new Booking();
         booking.setRequestedBy(requester);
-        applyBookingDetails(
-                booking,
-                resource,
-                request.bookingDate(),
-                request.startTime(),
-                request.endTime(),
-                request.purpose(),
-                request.expectedAttendees()
-        );
+        applyBookingDetails(booking, resource,
+                request.bookingDate(), request.startTime(), request.endTime(),
+                request.purpose(), request.expectedAttendees());
         booking.setStatus(BookingStatus.PENDING);
 
         return BookingResponse.fromEntity(bookingRepository.save(booking));
@@ -71,31 +78,25 @@ public class BookingService {
 
     @Transactional
     public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
-        Booking booking = requireDetailedBooking(bookingId);
+        Booking booking       = requireDetailedBooking(bookingId);
         UserAccount requester = requireUser(request.requesterEmail());
-        Resource resource = resourceService.requireActiveResource(request.resourceId());
+        Resource resource     = requireActiveResource(request.resourceId());
 
         if (!booking.getRequestedBy().getId().equals(requester.getId())) {
             throw new BookingException("Only the requester can edit this booking");
         }
-
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new BookingException("Only pending bookings can be edited");
         }
 
         validateTimeWindow(request.startTime(), request.endTime());
         validateCapacity(resource, request.expectedAttendees());
-        ensureNoConflict(resource.getId(), request.bookingDate(), request.startTime(), request.endTime(), booking.getId());
+        ensureNoConflict(resource.getId(), request.bookingDate(),
+                request.startTime(), request.endTime(), booking.getId());
 
-        applyBookingDetails(
-                booking,
-                resource,
-                request.bookingDate(),
-                request.startTime(),
-                request.endTime(),
-                request.purpose(),
-                request.expectedAttendees()
-        );
+        applyBookingDetails(booking, resource,
+                request.bookingDate(), request.startTime(), request.endTime(),
+                request.purpose(), request.expectedAttendees());
 
         return BookingResponse.fromEntity(bookingRepository.save(booking));
     }
@@ -104,40 +105,32 @@ public class BookingService {
     public List<BookingResponse> getMyBookings(String email, String status) {
         requireUser(email);
         BookingStatus bookingStatus = parseStatus(status);
-
         return bookingRepository.findAllByRequesterEmail(email.trim(), bookingStatus)
-                .stream()
-                .map(BookingResponse::fromEntity)
-                .toList();
+                .stream().map(BookingResponse::fromEntity).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> getAllBookings(String actorEmail, Long resourceId, LocalDate bookingDate, String status) {
+    public List<BookingResponse> getAllBookings(String actorEmail,
+            Long resourceId, LocalDate bookingDate, String status) {
         requireAdmin(actorEmail);
         BookingStatus bookingStatus = parseStatus(status);
-
         return bookingRepository.findAllForAdmin(bookingStatus, resourceId, bookingDate)
-                .stream()
-                .map(BookingResponse::fromEntity)
-                .toList();
+                .stream().map(BookingResponse::fromEntity).toList();
     }
 
     @Transactional
-    public BookingResponse approveBooking(Long bookingId, BookingActionRequest request) {
-        Booking booking = requireDetailedBooking(bookingId);
-        UserAccount admin = requireAdmin(request.actorEmail());
+    public BookingResponse approveBooking(Long bookingId,
+            BookingActionRequest request) {
+        Booking booking     = requireDetailedBooking(bookingId);
+        UserAccount admin   = requireAdmin(request.actorEmail());
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new BookingException("Only pending bookings can be approved");
         }
 
-        ensureNoConflict(
-                booking.getResource().getId(),
-                booking.getBookingDate(),
-                booking.getStartTime(),
-                booking.getEndTime(),
-                booking.getId()
-        );
+        ensureNoConflict(booking.getResource().getId(),
+                booking.getBookingDate(), booking.getStartTime(),
+                booking.getEndTime(), booking.getId());
 
         booking.setStatus(BookingStatus.APPROVED);
         booking.setReviewedBy(admin);
@@ -148,15 +141,15 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse rejectBooking(Long bookingId, BookingActionRequest request) {
-        Booking booking = requireDetailedBooking(bookingId);
+    public BookingResponse rejectBooking(Long bookingId,
+            BookingActionRequest request) {
+        Booking booking   = requireDetailedBooking(bookingId);
         UserAccount admin = requireAdmin(request.actorEmail());
-        String reason = normalizeReason(request.reason());
+        String reason     = normalizeReason(request.reason());
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new BookingException("Only pending bookings can be rejected");
         }
-
         if (reason == null) {
             throw new BookingException("Rejection reason is required");
         }
@@ -170,18 +163,22 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse cancelBooking(Long bookingId, BookingActionRequest request) {
-        Booking booking = requireDetailedBooking(bookingId);
-        UserAccount actor = requireUser(request.actorEmail());
-        boolean isOwner = booking.getRequestedBy().getId().equals(actor.getId());
-        boolean isAdmin = RoleNames.ADMIN.equals(normalizeRole(actor.getRole()));
+    public BookingResponse cancelBooking(Long bookingId,
+            BookingActionRequest request) {
+        Booking booking     = requireDetailedBooking(bookingId);
+        UserAccount actor   = requireUser(request.actorEmail());
+        boolean isOwner     = booking.getRequestedBy().getId()
+                                     .equals(actor.getId());
+        boolean isAdmin     = RoleNames.ADMIN.equals(
+                                normalizeRole(actor.getRole()));
 
         if (!isOwner && !isAdmin) {
-            throw new BookingException("Only the requester or an admin can cancel this booking");
+            throw new BookingException(
+                    "Only the requester or an admin can cancel this booking");
         }
-
         if (!ACTIVE_STATUSES.contains(booking.getStatus())) {
-            throw new BookingException("Only pending or approved bookings can be cancelled");
+            throw new BookingException(
+                    "Only pending or approved bookings can be cancelled");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -197,17 +194,18 @@ public class BookingService {
 
     @Transactional
     public void deleteBooking(Long bookingId, String requesterEmail) {
-        Booking booking = requireDetailedBooking(bookingId);
+        Booking booking       = requireDetailedBooking(bookingId);
         UserAccount requester = requireUser(requesterEmail);
 
         if (!booking.getRequestedBy().getId().equals(requester.getId())) {
-            throw new BookingException("Only the requester can delete this booking");
+            throw new BookingException(
+                    "Only the requester can delete this booking");
         }
-
         if (booking.getStatus() != BookingStatus.PENDING
                 && booking.getStatus() != BookingStatus.REJECTED
                 && booking.getStatus() != BookingStatus.CANCELLED) {
-            throw new BookingException("Only pending, rejected, or cancelled bookings can be deleted");
+            throw new BookingException(
+                    "Only pending, rejected, or cancelled bookings can be deleted");
         }
 
         booking.setRequesterArchived(true);
@@ -222,26 +220,24 @@ public class BookingService {
         if (booking.getStatus() != BookingStatus.PENDING
                 && booking.getStatus() != BookingStatus.REJECTED
                 && booking.getStatus() != BookingStatus.CANCELLED) {
-            throw new BookingException("Only pending, rejected, or cancelled bookings can be deleted by an admin");
+            throw new BookingException(
+                    "Only pending, rejected, or cancelled bookings can be deleted by an admin");
         }
 
         bookingRepository.delete(booking);
     }
+
+    // ── Private helpers ────────────────────────────────────────────────────
 
     private Booking requireDetailedBooking(Long bookingId) {
         return bookingRepository.findDetailedById(bookingId)
                 .orElseThrow(() -> new BookingException("Booking not found"));
     }
 
-    private void applyBookingDetails(
-            Booking booking,
-            Resource resource,
-            LocalDate bookingDate,
-            java.time.LocalTime startTime,
-            java.time.LocalTime endTime,
-            String purpose,
-            Integer expectedAttendees
-    ) {
+    private void applyBookingDetails(Booking booking, Resource resource,
+            LocalDate bookingDate, java.time.LocalTime startTime,
+            java.time.LocalTime endTime, String purpose,
+            Integer expectedAttendees) {
         booking.setResource(resource);
         booking.setBookingDate(bookingDate);
         booking.setStartTime(startTime);
@@ -250,40 +246,41 @@ public class BookingService {
         booking.setExpectedAttendees(expectedAttendees);
     }
 
-    private void ensureNoConflict(UUID resourceId, LocalDate bookingDate, java.time.LocalTime startTime, java.time.LocalTime endTime, Long excludedBookingId) {
+    private void ensureNoConflict(UUID resourceId, LocalDate bookingDate,
+            java.time.LocalTime startTime, java.time.LocalTime endTime,
+            Long excludedBookingId) {
         boolean hasConflict = !bookingRepository.findConflicts(
-                resourceId,
-                bookingDate,
-                startTime,
-                endTime,
-                ACTIVE_STATUSES,
-                excludedBookingId
-        ).isEmpty();
+                resourceId, bookingDate, startTime, endTime,
+                ACTIVE_STATUSES, excludedBookingId).isEmpty();
 
         if (hasConflict) {
-            throw new BookingException("This resource already has a booking in the selected time slot");
+            throw new BookingException(
+                    "This resource already has a booking in the selected time slot");
         }
     }
 
-    private void validateTimeWindow(java.time.LocalTime startTime, java.time.LocalTime endTime) {
+    private void validateTimeWindow(java.time.LocalTime startTime,
+            java.time.LocalTime endTime) {
         if (!startTime.isBefore(endTime)) {
-            throw new BookingException("Start time must be earlier than end time");
+            throw new BookingException(
+                    "Start time must be earlier than end time");
         }
     }
 
-    private void validateCapacity(Resource resource, Integer expectedAttendees) {
-        if (expectedAttendees > resource.getCapacity()) {
-            throw new BookingException("Expected attendees exceed the resource capacity");
+    private void validateCapacity(Resource resource,
+            Integer expectedAttendees) {
+        if (resource.getCapacity() != null
+                && expectedAttendees > resource.getCapacity()) {
+            throw new BookingException(
+                    "Expected attendees exceed the resource capacity");
         }
     }
 
     private BookingStatus parseStatus(String status) {
-        if (status == null || status.isBlank()) {
-            return null;
-        }
-
+        if (status == null || status.isBlank()) return null;
         try {
-            return BookingStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+            return BookingStatus.valueOf(
+                    status.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             throw new BookingException("Unsupported booking status");
         }
@@ -291,16 +288,16 @@ public class BookingService {
 
     private UserAccount requireUser(String email) {
         return userAccountRepository.findByEmailIgnoreCase(email.trim())
-                .orElseThrow(() -> new BookingException("User account not found"));
+                .orElseThrow(() -> new BookingException(
+                        "User account not found"));
     }
 
     private UserAccount requireAdmin(String email) {
         UserAccount user = requireUser(email);
-
         if (!RoleNames.ADMIN.equals(normalizeRole(user.getRole()))) {
-            throw new BookingException("Only admins can perform this action");
+            throw new BookingException(
+                    "Only admins can perform this action");
         }
-
         return user;
     }
 
@@ -309,10 +306,7 @@ public class BookingService {
     }
 
     private String normalizeReason(String reason) {
-        if (reason == null || reason.isBlank()) {
-            return null;
-        }
-
+        if (reason == null || reason.isBlank()) return null;
         return reason.trim();
     }
 }

@@ -7,7 +7,6 @@ import com.nexahub.model.enums.ResourceStatus;
 import com.nexahub.model.enums.ResourceType;
 import com.nexahub.repository.ResourceRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
